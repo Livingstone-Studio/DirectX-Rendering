@@ -1,0 +1,4 @@
+﻿C:\Users\jwliv\Documents\Uni\Year 3\Sem 1\AGP\Assessment\DirectX-Rendering\Q15605515_Livingstone_Joseph_CUP688_AE1_Project\Source\Rendering\Shaders\PixelShader.hlsl(130,9-31): error X3548: in ps_4_0_level_9_3 uints can only be used with known-positive values, use int if possible
+C:\Users\jwliv\Documents\Uni\Year 3\Sem 1\AGP\Assessment\DirectX-Rendering\Q15605515_Livingstone_Joseph_CUP688_AE1_Project\Source\Rendering\Shaders\PixelShader.hlsl(123,5-40): error X3511: forced to unroll loop, but unrolling failed.
+  
+  compilation failed; no code produced
