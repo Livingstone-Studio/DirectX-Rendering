@@ -34,11 +34,11 @@ VOut main(VIn vin)
     vout.position = mul(WVP, float4(vin.position, 1));
     vout.uv = vin.uv;
     
-    vout.pos = mul(world_matrix, world_position).xyz;
+    vout.pos = world_position.xyz;
     vout.normal = float4(vin.norm, 1);
     vout.cam_pos = cameraPos.xyz;
 
-    vout.world_pos = world_position.xyz;    
+    vout.world_pos = mul(world_matrix, float4(vin.position, 1));
     vout.world_normal = mul(inverse_world_matrix, float4(vin.norm, 1)).xyz;
 
 	return vout;

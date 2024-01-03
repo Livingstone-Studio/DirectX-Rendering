@@ -1,5 +1,6 @@
 #include "Application.h"
 
+#include "Time.h"
 #include "Input.h"
 #include "../GameObjects/Camera.h"
 
@@ -18,61 +19,11 @@ void Application::Initialize(HINSTANCE instanceHandle, int nCmdShow)
     _renderer = new Renderer(instanceHandle, nCmdShow);
 
     _game_objects.push_back(
-        new GameObject(L"Assets/psx_sword.obj",
-            L"Assets/ps1_sword_128x128.jpg",
-            false,
-            { { -5.0f, 0.0f, 0.0f }, {0.0f, XM_PIDIV2, 0.0f},
-            { 1.0f, 1.0f, 1.0f } })); 
-
-    _game_objects.push_back(
-        new GameObject(L"Assets/psx_skull.obj",
-            L"Assets/ps1_skull_256x256.png",
-            false,
-            { { 8.0f, 0.0f, 12.0f }, {0.0f, XM_PIDIV2, 0.0f},
-            { 1.0f, 1.0f, 1.0f } }));
-
-    //_game_objects.push_back(
-    //    new GameObject(L"Assets/terrainish.obj",
-    //        L"Assets/treeleaf.jpg",
-    //        false,
-    //        { { 0.0f, -4.0f, 0.0f }, {0.0f, XM_PIDIV2, 0.0f},
-    //        { 20.0f, 20.0f, 20.0f } }));
-
-    //_game_objects.push_back(
-    //    new GameObject(L"Assets/cube.obj",
-    //        L"Assets/rock.jpg",
-    //        false,
-    //        { { 0.0f, -1.0f, 0.0f }, {0.0f, XM_PIDIV2, 0.0f},
-    //        { 20.0f, 1.0f, 20.0f } }));
-
-    _game_objects.push_back(
-        new GameObject(L"Assets/fancy skull.obj",
-            L"Assets/128xBlueLich_Ref.png",
-            false,
-            { { 12.0f, 0.0f, 8.0f }, {0.0f, XM_PIDIV2, 0.0f},
-            { 1.0f, 1.0f, 1.0f } }));
-
-    _game_objects.push_back(
-        new GameObject(L"Assets/sphere.obj",
+        new GameObject(L"Assets/western_demo.obj",
             L"Assets/rock.jpg",
-            true,
-            { { 8.0f, 0.0f, 8.0f }, {0.0f, 0.0f, 0.0f},
-            { 1.0f, 1.0f, 1.0f } }));
-
-    //_game_objects.push_back(
-    //    new GameObject(L"Assets/cube.obj",
-    //        L"Assets/rock.jpg",
-    //        true,
-    //        { { 0.0f, 0.0f, 0.0f }, {0.0f, 0.0f, 0.0f},
-    //        { 5.0f, 0.5f, 5.0f } }));
-
-    _game_objects.push_back(
-        new GameObject(L"Assets/psx_skeleton.obj",
-            L"Assets/ps1_skeleton_256x256_transp.png",
-            true,
-            { { 12.0f, 0.0f, 12.0f }, {0.0f, XM_PIDIV2, 0.0f},
-            { 1.0f, 1.0f, 1.0f } }));
-
+            false,
+            { { 0.0f, 0.0f, 0.0f }, {0.0f, XM_PI, 0.0f},
+            { 0.05f, 0.05f, 0.05f } })); 
 
     Input::Initialize();
 
@@ -82,6 +33,8 @@ void Application::AppLoop()
 {
     while (true)
     {
+        Time::Update();
+
         MSG msg;
         if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
         {

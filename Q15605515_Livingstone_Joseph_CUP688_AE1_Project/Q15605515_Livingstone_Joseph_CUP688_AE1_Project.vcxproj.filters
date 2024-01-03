@@ -42,6 +42,9 @@
     <ClCompile Include="Source\Core\AssetManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Core\Time.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Core\Application.h">
@@ -74,11 +77,16 @@
     <ClInclude Include="Source\Core\AssetManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Core\Time.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Source\Rendering\Shaders\text2D_shaders.hlsl" />
     <FxCompile Include="Source\Rendering\Shaders\VertexShader.hlsl" />
     <FxCompile Include="Source\Rendering\Shaders\PixelShader.hlsl" />
+    <FxCompile Include="Source\Rendering\Shaders\SkyboxVertexShader.hlsl" />
+    <FxCompile Include="Source\Rendering\Shaders\SkyboxPixelShader.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

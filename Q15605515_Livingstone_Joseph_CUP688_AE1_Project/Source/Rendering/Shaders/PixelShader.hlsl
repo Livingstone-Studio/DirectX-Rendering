@@ -12,7 +12,7 @@ struct Light
     bool Enabled; // 4 bytes
     float Strength; // 4 bytes
     float SpotAngle; // 4 bytes
-    
+        
     // 16 bytes
     float4 Position; // 16 bytes
     
@@ -73,7 +73,8 @@ LightInfo DirectionalLight(Light light, float3 N, float3 Ep, float3 Wp)
     
     LightInfo lightInfo;    
     lightInfo.Diffuse = CalculateDiffuse(light, L, N);
-    lightInfo.Specular = CalculateSpecular(light, L, N, V);
+    //lightInfo.Specular = CalculateSpecular(light, L, N, V); NEED DIRECTIONAL LIGHTING FIX
+    lightInfo.Specular = 0;
     return lightInfo;
 }
 
@@ -144,6 +145,9 @@ float4 main(float4 position : SV_Position, float4 color : COLOR, float2 uv : TEX
         totalInfo.Specular += info.Specular;
     }
 
+    totalInfo.Diffuse = saturate(totalInfo.Diffuse);
+    totalInfo.Specular = saturate(totalInfo.Specular);
+    
     float4 finalColor = AmbientLight.Colour + totalInfo.Diffuse + totalInfo.Specular;
     
     float4 sampled = texture0.Sample(sampler0, uv);

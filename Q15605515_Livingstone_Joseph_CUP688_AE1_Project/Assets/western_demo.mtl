@@ -1,0 +1,72 @@
+# Blender 4.0.2 MTL File: 'None'
+# www.blender.org
+
+newmtl Mat_Background_01
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.000000 0.000000 0.000000
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+
+newmtl Mat_Background_02
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.000304 0.000000 0.000000
+Ks 1.000000 1.000000 1.000000
+Ke 0.000304 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+
+newmtl Mat_Background_03
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.000304 0.000000 0.000000
+Ks 1.000000 1.000000 1.000000
+Ke 0.000304 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+
+newmtl Mat_Cloud
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.000304 0.000304 0.000304
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+
+newmtl Mat_Glass
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 0.000000
+illum 6
+map_Kd C:/Users/jwliv/Downloads/POLYGON_Western_Pack_Source_Files/Obj/PolygonWestern_Texture_01_A.png
+
+newmtl Mat_PolygonWestern_01_A
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+map_Kd C:/Users/jwliv/Downloads/POLYGON_Western_Pack_Source_Files/Obj/PolygonWestern_Texture_01_A.png
+
+newmtl Mat_PolygonWestern_Signs_01
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+illum 3
+map_Kd C:/Users/jwliv/Downloads/POLYGON_Western_Pack_Source_Files/Obj/PolygonWestern_Sign_01.png
+map_d C:/Users/jwliv/Downloads/POLYGON_Western_Pack_Source_Files/Obj/PolygonWestern_Sign_01.png

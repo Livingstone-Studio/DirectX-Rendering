@@ -24,6 +24,8 @@ private:
 
 	bool m_run;
 
+	bool skele_up;
+
 	Renderer* _renderer;
 	std::vector<GameObject*> _game_objects;
 };

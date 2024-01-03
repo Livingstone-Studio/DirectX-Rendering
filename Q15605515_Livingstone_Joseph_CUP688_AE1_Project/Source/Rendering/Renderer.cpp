@@ -1,6 +1,8 @@
 #include "Renderer.h"
 
+#include "../Core/Time.h"
 #include "../Core/Input.h"
+#include "../Core/AssetManager.h"
 #include "../Rendering/External/ReadData.h"
 #include "../GameObjects/GameObject.h"
 #include "../GameObjects/Camera.h"
@@ -49,11 +51,20 @@ Renderer::Renderer(HINSTANCE instanceHandle, int nCmdShow)
 		OutputDebugString(L"Failed to create constant buffer.");
 	}
 
+	cbd.ByteWidth = sizeof(SKYBOXCBUFFER0);
+	result = _device->CreateBuffer(&cbd, NULL, &_skybox_const_buffer);
+	if (FAILED(result))
+	{
+		OutputDebugString(L"Failed to create constant buffer.");
+	}
+
 	Instance = this;
 
-	_cameras.push_back(new Camera());
-	_cameras.push_back(new Camera());
+	_cameras.push_back(new Camera(false));
+	_cameras.push_back(new Camera(true));
 	_camera = _cameras[_current_cam];
+
+	_fps_counter = new Text2D("Assets/font1.png", _device, _device_context);
 
 	AmbientLight.Type = 0;
 	AmbientLight.Enabled = true;
@@ -68,16 +79,24 @@ Renderer::Renderer(HINSTANCE instanceHandle, int nCmdShow)
 	GameLights[0].Strength = 10;
 	GameLights[0].Position = { 0.0f, 0.0f,0.0f, 0.0f };
 	GameLights[0].Direction = { 0.96f, 0.4f, 0.75f, 0.3f };
-	GameLights[0].Colour = { 0.4f, 0.4f, 0.0f, 1.0f };
+	GameLights[0].Colour = { 0.8f, 0.8f, 0.0f, 1.0f };
 	GameLights[0].SpotAngle = 0;
 
 	GameLights[1].Type = POINT_LIGHT;
 	GameLights[1].Enabled = true;
 	GameLights[1].Strength = 10;
-	GameLights[1].Position = { 10.0f, 0.0f, 10.0f, 1.0f };
+	GameLights[1].Position = { 10.0f, 5.0f, 10.0f, 1.0f };
 	GameLights[1].Direction = { 0.0f, 0.0f, 0.0f, 1.0f };
 	GameLights[1].Colour = DirectX::Colors::Red;
 	GameLights[1].SpotAngle = 45;
+
+	GameLights[2].Type = SPOT_LIGHT;
+	GameLights[2].Enabled = true;
+	GameLights[2].Strength = 100;
+	GameLights[2].Position = { 0.0f, 6.0f, 0.0f, 1.0f };
+	GameLights[2].Direction = { 0.0f, 1.0f, 0.0f, 1.0f };
+	GameLights[2].Colour = DirectX::Colors::Aqua;
+	GameLights[2].SpotAngle = 30;
 }
 
 Renderer::~Renderer()
@@ -100,21 +119,6 @@ void Renderer::Draw(std::vector<GameObject*> gameObjects)
 	if (!_camera)
 		return;
 
-	//XMFLOAT3 s;
-	//XMStoreFloat3(&s, GameLights[1].Position);
-	//if (Up)
-	//{
-	//	GameLights[1].Position = { 10.0f, s.y + 0.001f, 10.0f };
-	//	if (s.y > 5)
-	//		Up = false;
-	//}
-	//else
-	//{
-	//	GameLights[1].Position = { 10.0f, s.y - 0.001f, 10.0f };
-	//	if (s.y < -5)
-	//		Up = true;
-	//}
-
 	DrawSkybox();
 	
 	_device_context->ClearDepthStencilView(_depth_buffer, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
@@ -127,15 +131,12 @@ void Renderer::Draw(std::vector<GameObject*> gameObjects)
 		if (!visual)
 			continue;
 
-		//gameObjects[i]->Rotate(XMFLOAT3(0,0.001f,0));
-
 		UINT stride = sizeof(Vertex);
 		UINT offset = 0;
 		_device_context->IASetVertexBuffers(0, 1, visual->GetVertexBuffer(), &stride, &offset);
 		_device_context->IASetIndexBuffer(visual->GetIndexBuffer(), DXGI_FORMAT_R32_UINT, 0);
 		_device_context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-
+		
 		if (visual->Transparency)
 		{
 			_device_context->OMSetBlendState(_alpha_blend_enabled, 0, 0xffffffff);
@@ -155,7 +156,7 @@ void Renderer::Draw(std::vector<GameObject*> gameObjects)
 		view = _camera->GetViewMatrix();
 
 		// Projection
-		projection = XMMatrixPerspectiveFovLH(XMConvertToRadians(60), SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
+		projection = XMMatrixPerspectiveFovLH(XMConvertToRadians(60), SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.01f, 1000.0f);
 
 
 		// World
@@ -187,6 +188,9 @@ void Renderer::Draw(std::vector<GameObject*> gameObjects)
 			pixelCBuffer.Lights[i].Direction = light_dir;
 			
 			pixelCBuffer.Lights[i].Colour = GameLights[i].Colour;
+
+			pixelCBuffer.Lights[i].SpotAngle = XMConvertToRadians(GameLights[i].SpotAngle);
+
 		}
 
 		_device_context->UpdateSubresource(_const_buffer, 0, 0, &cbuffer, 0, 0);
@@ -203,6 +207,16 @@ void Renderer::Draw(std::vector<GameObject*> gameObjects)
 			_device_context->RSSetState(_rasterizer_back_culling);
 		}
 	}
+
+	if (_fps_counter)
+	{
+		counter += Time::GetDeltaTime();
+		_fps_counter->AddText(to_string(Time::GetFPS()), -1, +1, 0.075f);
+		_device_context->OMSetBlendState(_alpha_blend_enabled, 0, 0xffffffff);
+		_fps_counter->RenderText();
+		_device_context->OMSetBlendState(_alpha_blend_disabled, 0, 0xffffffff);
+	}
+
 	_swapchain->Present(0, 0);
 }
 
@@ -210,49 +224,38 @@ void Renderer::DrawSkybox()
 {
 	if (!_camera)
 		return;
-	IVisualObject* visual = dynamic_cast<IVisualObject*>(_camera->GetSkybox());
-	if (!visual)
-		return;
+
+	_device_context->OMSetDepthStencilState(_no_depth_write, 1);
+	_device_context->RSSetState(_rasterizer_front_culling);
+
+	_device_context->VSSetShader(_skybox_vertex_shader, 0, 0);
+	_device_context->PSSetShader(_skybox_pixel_shader, 0, 0);
+	_device_context->IASetInputLayout(_skybox_layout);
+
+	SKYBOXCBUFFER0 sbcbuff;
+
+	XMMATRIX translation, projection, view;
+	translation = XMMatrixTranslation(_camera->GetPosition().x, _camera->GetPosition().y, _camera->GetPosition().z);
+	projection = XMMatrixPerspectiveFovLH(XMConvertToRadians(60), SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
+	view = _camera->GetViewMatrix();
+	sbcbuff.WVP = translation * view * projection;
+	_device_context->UpdateSubresource(_skybox_const_buffer, 0, 0, &sbcbuff, 0, 0);
+
+	_device_context->VSSetConstantBuffers(0, 1, &_skybox_const_buffer);
+	_device_context->PSGetSamplers(0, 1, &_skybox_sampler);
+	_device_context->PSSetShaderResources(0, 1, &_skybox_texture);
 
 	UINT stride = sizeof(Vertex);
 	UINT offset = 0;
-	_device_context->IASetVertexBuffers(0, 1, visual->GetVertexBuffer(), &stride, &offset);
-	_device_context->IASetIndexBuffer(visual->GetIndexBuffer(), DXGI_FORMAT_R32_UINT, 0);
-	_device_context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	_device_context->IASetVertexBuffers(0, 1, &_skybox_vertex_buffer, &stride, &offset);
+	_device_context->Draw(_skybox.Vertices.size(), 0);
 
-	_device_context->RSSetState(_rasterizer_front_culling);
-	_device_context->OMSetBlendState(_alpha_blend_disabled, 0, 0xffffffff);
-
-	_device_context->PSSetSamplers(0, 1, visual->GetSampler());
-	_device_context->PSSetShaderResources(0, 1, visual->GetTexture());
-
-
-	CBUFFER0 cbuffer;
-	XMMATRIX translation, rotation, scale;
-	XMMATRIX world, view, projection;
-
-	// View
-	view = _camera->GetViewMatrix();
-
-	// Projection
-	projection = XMMatrixPerspectiveFovLH(XMConvertToRadians(60), SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
-
-
-	// World
-	world = _camera->GetSkybox()->GetTransform().GetWorldMatrix();
-
-
-	cbuffer.WVP = world * view * projection;
-	//cbuffer.ambientLightCol = _skybox_ambient_light_colour;
-	//cbuffer.directionalLightCol = _skybox_directional_light_colour;
-	//XMMATRIX transpose = XMMatrixTranspose(world);
-	//cbuffer.lightDir = XMVector3Transform(_skybox_directional_light_direction, transpose);
-
-	_device_context->UpdateSubresource(_const_buffer, 0, 0, &cbuffer, 0, 0);
-	_device_context->VSSetConstantBuffers(0, 1, &_const_buffer);
-	_device_context->DrawIndexed(visual->GetMesh().Indices.size(), 0, 0);
-
+	_device_context->OMSetDepthStencilState(_solid_depth_write, 1);
 	_device_context->RSSetState(_rasterizer_back_culling);
+
+	_device_context->VSSetShader(_default_vertex_shader, 0, 0);
+	_device_context->PSSetShader(_default_pixel_shader, 0, 0);
+	_device_context->IASetInputLayout(_default_layout);
 }
 
 HRESULT Renderer::InitWindow(HINSTANCE instanceHandle, int nCmdShow)
@@ -278,7 +281,7 @@ HRESULT Renderer::InitWindow(HINSTANCE instanceHandle, int nCmdShow)
 		L"WindowClass1",
 		_window_name,
 		WS_OVERLAPPED | WS_MINIMIZEBOX | WS_SYSMENU,
-		100,
+		600,
 		100,
 		wr.right - wr.left,
 		wr.bottom - wr.top,
@@ -359,6 +362,15 @@ HRESULT Renderer::InitD3D()
 		return E_FAIL;
 	}
 
+	D3D11_SAMPLER_DESC samplerDesc;
+	ZeroMemory(&samplerDesc, sizeof(D3D11_SAMPLER_DESC));
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+	_device->CreateSamplerState(&samplerDesc, &_skybox_sampler);
+
 	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
 	ZeroMemory(&dsvDesc, sizeof(D3D11_DEPTH_STENCIL_VIEW_DESC));
 	dsvDesc.Format = text2DDesc.Format;
@@ -382,7 +394,6 @@ HRESULT Renderer::InitD3D()
 	viewport.MaxDepth = 1;
 	_device_context->RSSetViewports(1, &viewport);
 
-
 	D3D11_RASTERIZER_DESC rast_none_desc;
 	ZeroMemory(&rast_none_desc, sizeof(D3D11_RASTERIZER_DESC));
 	rast_none_desc.CullMode = D3D11_CULL_NONE;
@@ -400,6 +411,14 @@ HRESULT Renderer::InitD3D()
 	rast_front_desc.CullMode = D3D11_CULL_FRONT;
 	rast_front_desc.FillMode = D3D11_FILL_SOLID;
 	_device->CreateRasterizerState(&rast_front_desc, &_rasterizer_front_culling);
+
+	D3D11_DEPTH_STENCIL_DESC depth_desc = { 0 };
+	depth_desc.DepthEnable = true;
+	depth_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	depth_desc.DepthFunc = D3D11_COMPARISON_LESS;
+	_device->CreateDepthStencilState(&depth_desc, &_solid_depth_write);
+	depth_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+	_device->CreateDepthStencilState(&depth_desc, &_no_depth_write);
 
 	_device_context->RSSetState(_rasterizer_back_culling);
 
@@ -428,52 +447,139 @@ HRESULT Renderer::InitD3D()
 	bd2.IndependentBlendEnable = FALSE;
 	bd2.AlphaToCoverageEnable = FALSE;
 	_device->CreateBlendState(&bd2, &_alpha_blend_disabled);
+
+	_skybox = AssetManager::LoadObj(L"Assets/cube.obj");
+
+	D3D11_BUFFER_DESC bd = { 0 };
+
+	bd.Usage = D3D11_USAGE_DYNAMIC;
+	bd.ByteWidth = sizeof(Vertex) * _skybox.Vertices.size();
+	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	HRESULT result = _device->CreateBuffer(&bd, NULL, &_skybox_vertex_buffer);
+
+	if (FAILED(result))
+	{
+		OutputDebugString(L"Failed to create vertex buffer.");
+		return E_FAIL;
+	}
+
+	D3D11_MAPPED_SUBRESOURCE ms;
+	_device_context->Map(_skybox_vertex_buffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms);
+	memcpy(ms.pData, _skybox.Vertices.data(), sizeof(Vertex) * _skybox.Vertices.size());
+	_device_context->Unmap(_skybox_vertex_buffer, NULL);
+
+	CreateDDSTextureFromFile(_device, _device_context, L"Assets/skybox01.dds", NULL, &_skybox_texture);
+
 	return S_OK;
 }
 
 HRESULT Renderer::InitPipeline()
 {
+	LoadVertexShader(L"VertexShader.cso", &_default_vertex_shader, &_default_layout);
+	LoadPixelShader(L"PixelShader.cso", &_default_pixel_shader);
+
+	LoadVertexShader(L"SkyboxVertexShader.cso", &_skybox_vertex_shader, &_skybox_layout);
+	LoadPixelShader(L"SkyboxPixelShader.cso", &_skybox_pixel_shader);
+
+	return S_OK;
+}
+
+void Renderer::CleanD3D()
+{
+	if (_fps_counter)
+		delete _fps_counter;
+
+	if (_default_vertex_shader)
+		_default_vertex_shader->Release();
+	if (_default_pixel_shader)
+		_default_pixel_shader->Release();
+
+	if (_skybox_vertex_shader)
+		_skybox_vertex_shader->Release();
+	if (_skybox_pixel_shader)
+		_skybox_pixel_shader->Release();
+
+
+	if (_const_buffer)
+		_const_buffer->Release();
+	if (_pixel_const_buffer)
+		_pixel_const_buffer->Release();
+	if (_skybox_const_buffer)
+		_skybox_const_buffer->Release();
+	
+	if (_skybox_vertex_buffer)
+		_skybox_vertex_buffer->Release();
+
+	if (_skybox_sampler)
+		_skybox_sampler->Release();
+	if (_skybox_texture)
+		_skybox_texture->Release();
+
+	if (_default_layout)
+		_default_layout->Release();
+	if (_skybox_layout)
+		_skybox_layout->Release();
+
+	if (_rasterizer_no_culling)
+		_rasterizer_no_culling->Release();
+	if (_rasterizer_back_culling)
+		_rasterizer_back_culling->Release();
+	if (_rasterizer_front_culling)
+		_rasterizer_front_culling->Release();
+
+	if (_solid_depth_write)
+		_solid_depth_write->Release();
+	if (_no_depth_write)
+		_no_depth_write->Release();
+
+	if (_alpha_blend_enabled)
+		_alpha_blend_enabled->Release();
+	if (_alpha_blend_disabled)
+		_alpha_blend_disabled->Release();
+
+	if (_depth_buffer)
+		_depth_buffer->Release();
+	if (_back_buffer)
+		_back_buffer->Release();
+
+	if (_swapchain)
+		_swapchain->Release();
+
+	if (_device)
+		_device->Release();
+	if (_device_context)
+		_device_context->Release();
+}
+
+HRESULT Renderer::LoadVertexShader(LPCWSTR filename, ID3D11VertexShader** vs, ID3D11InputLayout** il)
+{
 	HRESULT result;
-	auto vertexShaderBytecode = DX::ReadData(L"VertexShader.cso");
-	auto pixelShaderBytecode = DX::ReadData(L"PixelShader.cso");
+	auto vertexShaderBytecode = DX::ReadData(filename);
 
-	result = _device->CreateVertexShader(vertexShaderBytecode.data(), vertexShaderBytecode.size(), NULL, &_vertex_shader);
+	result = _device->CreateVertexShader(vertexShaderBytecode.data(), vertexShaderBytecode.size(), NULL, vs);
 	if (FAILED(result))
 	{
 		return result;
 	}
-
-	result = _device->CreatePixelShader(pixelShaderBytecode.data(), pixelShaderBytecode.size(), NULL, &_pixel_shader);
-	if (FAILED(result))
-	{
-		return result;
-	}
-
-	_device_context->VSSetShader(_vertex_shader, 0, 0);
-	_device_context->PSSetShader(_pixel_shader, 0, 0);
 
 	ID3D11ShaderReflection* vShaderReflection = NULL;
-	result = D3DReflect(vertexShaderBytecode.data(), vertexShaderBytecode.size(),
-		IID_ID3D11ShaderReflection, (void**)&vShaderReflection);
+	result = D3DReflect(vertexShaderBytecode.data(), vertexShaderBytecode.size(), IID_ID3D11ShaderReflection, (void**)&vShaderReflection);
 	if (FAILED(result))
 	{
 		return result;
 	}
-
 	D3D11_SHADER_DESC desc;
 	result = vShaderReflection->GetDesc(&desc);
 	if (FAILED(result))
 	{
 		return result;
 	}
-
-	D3D11_SIGNATURE_PARAMETER_DESC* signatureParamDescriptions =
-		new D3D11_SIGNATURE_PARAMETER_DESC[desc.InputParameters]{ 0 };
+	D3D11_SIGNATURE_PARAMETER_DESC* signatureParamDescriptions = new D3D11_SIGNATURE_PARAMETER_DESC[desc.InputParameters]{ 0 };
 	for (UINT i = 0; i < desc.InputParameters; ++i)
 	{
 		vShaderReflection->GetInputParameterDesc(i, &signatureParamDescriptions[i]);
 	}
-
 	D3D11_INPUT_ELEMENT_DESC* ied = new D3D11_INPUT_ELEMENT_DESC[desc.InputParameters]{ 0 };
 	for (size_t i = 0; i < desc.InputParameters; ++i)
 	{
@@ -495,54 +601,29 @@ HRESULT Renderer::InitPipeline()
 		ied[i].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 		ied[i].InstanceDataStepRate = 0;
 	}
-
-	result = _device->CreateInputLayout(ied, desc.InputParameters,
-		vertexShaderBytecode.data(), vertexShaderBytecode.size(), &_layout);
+	result = _device->CreateInputLayout(ied, desc.InputParameters, vertexShaderBytecode.data(), vertexShaderBytecode.size(), il);
 	if (FAILED(result))
 	{
 		OutputDebugString(L"Failed to create input layout...");
 		return result;
 	}
 
-	_device_context->IASetInputLayout(_layout);
-
 	delete[] signatureParamDescriptions;
 	delete[] ied;
 	return S_OK;
 }
 
-void Renderer::CleanD3D()
+HRESULT Renderer::LoadPixelShader(LPCWSTR filename, ID3D11PixelShader** ps)
 {
-	if (_vertex_shader)
-		_vertex_shader->Release();
-	if (_pixel_shader)
-		_pixel_shader->Release();
-	if (_layout)
-		_layout->Release();
+	HRESULT result;
+	auto pixelShaderBytecode = DX::ReadData(filename);
 
-	if (_rasterizer_no_culling)
-		_rasterizer_no_culling->Release();
-	if (_rasterizer_back_culling)
-		_rasterizer_back_culling->Release();
-	if (_rasterizer_front_culling)
-		_rasterizer_front_culling->Release();
-
-	if (_alpha_blend_enabled)
-		_alpha_blend_enabled->Release();
-	if (_alpha_blend_disabled)
-		_alpha_blend_disabled->Release();
-
-	if (_depth_buffer)
-		_depth_buffer->Release();
-	if (_back_buffer)
-		_back_buffer->Release();
-
-	if (_swapchain)
-		_swapchain->Release();
-	if (_device)
-		_device->Release();
-	if (_device_context)
-		_device_context->Release();
+	result = _device->CreatePixelShader(pixelShaderBytecode.data(), pixelShaderBytecode.size(), NULL, ps);
+	if (FAILED(result))
+	{
+		return result;
+	}
+	return S_OK;
 }
 
 void Renderer::SwitchCamera()

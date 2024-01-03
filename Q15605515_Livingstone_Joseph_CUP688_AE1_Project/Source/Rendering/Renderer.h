@@ -5,9 +5,11 @@
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
 #include <DirectXColors.h>
+#include <DDSTextureLoader.h>
 
 #include "../GameObjects/Camera.h"
 #include "Mesh.h"
+#include "External/text2D.h"
 
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
@@ -30,6 +32,11 @@ struct CBUFFER0
 	XMVECTOR objectWorldPos;
 	XMMATRIX worldMatrix;
 	XMMATRIX inverseWorldMatrix;
+};
+
+struct SKYBOXCBUFFER0
+{
+	XMMATRIX WVP;
 };
 
 struct Light
@@ -82,6 +89,12 @@ private:
 	HRESULT InitPipeline();
 	void CleanD3D();
 
+	HRESULT LoadVertexShader(LPCWSTR filename, ID3D11VertexShader** vs, ID3D11InputLayout** il);
+	HRESULT LoadPixelShader(LPCWSTR filename, ID3D11PixelShader** ps);
+
+	Text2D* _fps_counter;
+	float counter = 0.0f;
+
 private:
 	Camera* _camera;
 
@@ -105,9 +118,10 @@ public:
 	void SwitchCamera();
 
 private:
-	const wchar_t* _window_name = L"Horror Game";
+	const wchar_t* _window_name = L"Despacitios Free";
 	ID3D11Buffer* _const_buffer = NULL;
 	ID3D11Buffer* _pixel_const_buffer = NULL;
+	ID3D11Buffer* _skybox_const_buffer = NULL;
 
 	HINSTANCE _instance_handle = NULL;
 	HWND _window_handle = NULL;
@@ -115,10 +129,16 @@ private:
 	ID3D11Device* _device = NULL;
 	ID3D11DeviceContext* _device_context = NULL;
 	IDXGISwapChain* _swapchain = NULL;
-	ID3D11InputLayout* _layout = NULL;
+
+	ID3D11InputLayout* _default_layout = NULL;
+	ID3D11InputLayout* _skybox_layout = NULL;
 
 	ID3D11RenderTargetView* _back_buffer = NULL;
+
 	ID3D11DepthStencilView* _depth_buffer = NULL;
+
+	ID3D11DepthStencilState* _solid_depth_write = NULL;
+	ID3D11DepthStencilState* _no_depth_write = NULL;
 
 	ID3D11BlendState* _alpha_blend_enabled = NULL;
 	ID3D11BlendState* _alpha_blend_disabled = NULL;
@@ -127,8 +147,18 @@ private:
 	ID3D11RasterizerState* _rasterizer_back_culling = NULL;
 	ID3D11RasterizerState* _rasterizer_front_culling = NULL;
 
-	ID3D11VertexShader* _vertex_shader = NULL;
-	ID3D11PixelShader* _pixel_shader = NULL;
+	ID3D11VertexShader* _default_vertex_shader = NULL;
+	ID3D11PixelShader* _default_pixel_shader = NULL;
+
+	ID3D11VertexShader* _skybox_vertex_shader = NULL;
+	ID3D11PixelShader* _skybox_pixel_shader = NULL;
+
+
+	Mesh _skybox;
+	ID3D11Buffer* _skybox_vertex_buffer = NULL;
+	ID3D11SamplerState* _skybox_sampler = NULL;
+	ID3D11ShaderResourceView* _skybox_texture = NULL;
+
 
 	Light AmbientLight;
 	Light GameLights[MAX_LIGHTS];
