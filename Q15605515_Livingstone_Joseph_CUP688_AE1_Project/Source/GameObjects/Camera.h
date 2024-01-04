@@ -19,6 +19,7 @@ public:
 	XMFLOAT3 GetPosition() { return _transform.pos; }
 	float GetPitch() { return _transform.rot.x; }
 	float GetYaw() { return _transform.rot.y; }
+	bool IsFree() { return _free_cam; }
 
 	XMMATRIX GetViewMatrix();
 

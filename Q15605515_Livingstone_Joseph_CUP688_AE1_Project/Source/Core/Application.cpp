@@ -14,11 +14,14 @@ int Application::Execute(HINSTANCE instanceHandle, int nCmdShow)
 
 void Application::Initialize(HINSTANCE instanceHandle, int nCmdShow)
 {
+    m_instance_handle = instanceHandle;
+
     OpenConsole();
 
-    _renderer = new Renderer(instanceHandle, nCmdShow);
+    m_window = new GameWindow(instanceHandle, nCmdShow);
+    m_renderer = new Renderer(m_window);
 
-    _game_objects.push_back(
+    m_game_objects.push_back(
         new GameObject(L"Assets/western_demo.obj",
             L"Assets/rock.jpg",
             false,
@@ -34,6 +37,7 @@ void Application::AppLoop()
     while (true)
     {
         Time::Update();
+        m_window->Update();
 
         MSG msg;
         if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
@@ -57,18 +61,19 @@ void Application::AppLoop()
 
 void Application::Cleanup()
 {
-    for (int i = 0; i < _game_objects.size(); ++i)
+    for (int i = 0; i < m_game_objects.size(); ++i)
     {
-        if (!_game_objects[i])
+        if (!m_game_objects[i])
             continue;        
-        delete _game_objects[i];
-        _game_objects[i] = nullptr;
+        delete m_game_objects[i];
+        m_game_objects[i] = nullptr;
     }
-    _game_objects.clear();
+    m_game_objects.clear();
 
-
-    if (_renderer)
-        delete _renderer;
+    if (m_window)
+        delete m_window;
+    if (m_renderer)
+        delete m_renderer;
 }
 
 void Application::Start()
@@ -86,8 +91,8 @@ void Application::Update()
 
 void Application::Render()
 {
-    if (_renderer)
-        _renderer->Draw(_game_objects);
+    if (m_renderer)
+        m_renderer->Draw(m_game_objects);
 }
 
 void Application::OpenConsole()

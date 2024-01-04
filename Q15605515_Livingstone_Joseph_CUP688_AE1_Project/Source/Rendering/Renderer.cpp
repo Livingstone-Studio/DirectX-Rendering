@@ -9,16 +9,20 @@
 #include "../GameObjects/IVisualObject.h"
 #include <chrono>
 #include <iostream>
+
 Renderer* Renderer::Instance{ nullptr };
 
-Renderer::Renderer(HINSTANCE instanceHandle, int nCmdShow)
+Renderer::Renderer(GameWindow* window)
 {
-	if (FAILED(InitWindow(instanceHandle, nCmdShow)))
+	m_window = window;
+
+	if (!m_window)
 	{
-		MessageBox(NULL, L"Failed to create window.", L"Critical Error!", MB_ICONERROR | MB_OK);
+		MessageBox(NULL, L"Failed to find a window.", L"Critical Error!", MB_ICONERROR | MB_OK);
 		CleanD3D();
 		return;
 	}
+
 	if (FAILED(InitD3D()))
 	{
 		MessageBox(NULL, L"Failed to initialise Direct3D.", L"Critical Error!", MB_ICONERROR | MB_OK);
@@ -156,7 +160,7 @@ void Renderer::Draw(std::vector<GameObject*> gameObjects)
 		view = _camera->GetViewMatrix();
 
 		// Projection
-		projection = XMMatrixPerspectiveFovLH(XMConvertToRadians(60), SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.01f, 1000.0f);
+		projection = XMMatrixPerspectiveFovLH(XMConvertToRadians(60), m_window->GetScreenSize()[0] / m_window->GetScreenSize()[1], 0.01f, 1000.0f);
 
 
 		// World
@@ -211,6 +215,7 @@ void Renderer::Draw(std::vector<GameObject*> gameObjects)
 	if (_fps_counter)
 	{
 		counter += Time::GetDeltaTime();
+
 		_fps_counter->AddText(to_string(Time::GetFPS()), -1, +1, 0.075f);
 		_device_context->OMSetBlendState(_alpha_blend_enabled, 0, 0xffffffff);
 		_fps_counter->RenderText();
@@ -236,7 +241,7 @@ void Renderer::DrawSkybox()
 
 	XMMATRIX translation, projection, view;
 	translation = XMMatrixTranslation(_camera->GetPosition().x, _camera->GetPosition().y, _camera->GetPosition().z);
-	projection = XMMatrixPerspectiveFovLH(XMConvertToRadians(60), SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
+	projection = XMMatrixPerspectiveFovLH(XMConvertToRadians(60), m_window->GetScreenSize()[0] / m_window->GetScreenSize()[1], 0.1f, 100.0f);
 	view = _camera->GetViewMatrix();
 	sbcbuff.WVP = translation * view * projection;
 	_device_context->UpdateSubresource(_skybox_const_buffer, 0, 0, &sbcbuff, 0, 0);
@@ -258,58 +263,18 @@ void Renderer::DrawSkybox()
 	_device_context->IASetInputLayout(_default_layout);
 }
 
-HRESULT Renderer::InitWindow(HINSTANCE instanceHandle, int nCmdShow)
-{
-	_instance_handle = instanceHandle;
-
-	WNDCLASSEX wc = {};
-	wc.cbSize = sizeof(WNDCLASSEX);
-	wc.style = CS_HREDRAW | CS_VREDRAW;
-	wc.lpfnWndProc = Input::WindowProc;
-	wc.hInstance = instanceHandle;
-	wc.lpszClassName = L"WindowClass1";
-	wc.hbrBackground = (HBRUSH)COLOR_WINDOW;
-
-	if (!RegisterClassEx(&wc))
-		return E_FAIL;
-
-	RECT wr = { 0,0,SCREEN_WIDTH,SCREEN_HEIGHT };
-	AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
-
-	_window_handle = CreateWindowEx(
-		NULL,
-		L"WindowClass1",
-		_window_name,
-		WS_OVERLAPPED | WS_MINIMIZEBOX | WS_SYSMENU,
-		600,
-		100,
-		wr.right - wr.left,
-		wr.bottom - wr.top,
-		NULL,
-		NULL,
-		instanceHandle,
-		NULL);
-
-	if (_window_handle == NULL)
-		return E_FAIL;
-
-	ShowWindow(_window_handle, nCmdShow);
-
-	return S_OK;
-}
-
 HRESULT Renderer::InitD3D()
 {
 	DXGI_SWAP_CHAIN_DESC scd = {};
 
 	scd.BufferCount = 1;
 	scd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	scd.BufferDesc.Width = SCREEN_WIDTH;
-	scd.BufferDesc.Height = SCREEN_HEIGHT;
+	scd.BufferDesc.Width = (UINT)m_window->GetScreenSize()[0];
+	scd.BufferDesc.Height = (UINT)m_window->GetScreenSize()[1];
 	scd.BufferDesc.RefreshRate.Numerator = 60;
 	scd.BufferDesc.RefreshRate.Denominator = 1;
 	scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	scd.OutputWindow = _window_handle;
+	scd.OutputWindow = m_window->GetWindowHandle();
 	scd.SampleDesc.Count = 1;
 	scd.Windowed = TRUE;
 	scd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
@@ -345,8 +310,8 @@ HRESULT Renderer::InitD3D()
 
 
 	D3D11_TEXTURE2D_DESC text2DDesc = { 0 };
-	text2DDesc.Width = SCREEN_WIDTH;
-	text2DDesc.Height = SCREEN_HEIGHT;
+	text2DDesc.Width = (UINT)m_window->GetScreenSize()[0];
+	text2DDesc.Height = (UINT)m_window->GetScreenSize()[1];
 	text2DDesc.ArraySize = 1;
 	text2DDesc.MipLevels = 1;
 	text2DDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -388,8 +353,8 @@ HRESULT Renderer::InitD3D()
 	D3D11_VIEWPORT viewport = {};
 	viewport.TopLeftX = 0;
 	viewport.TopLeftY = 0;
-	viewport.Width = SCREEN_WIDTH;
-	viewport.Height = SCREEN_HEIGHT;
+	viewport.Width = (UINT)m_window->GetScreenSize()[0];
+	viewport.Height = (UINT)m_window->GetScreenSize()[1];
 	viewport.MinDepth = 0;
 	viewport.MaxDepth = 1;
 	_device_context->RSSetViewports(1, &viewport);
@@ -633,4 +598,5 @@ void Renderer::SwitchCamera()
 		_current_cam = 0;
 	if (_cameras[_current_cam])
 		_camera = _cameras[_current_cam];
+	Input::SetMouseMode(!_camera->IsFree() ? Mouse::MODE_ABSOLUTE : Mouse::MODE_RELATIVE);
 }

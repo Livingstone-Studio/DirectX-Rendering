@@ -1,6 +1,8 @@
 #pragma once
 
 #include <Windows.h>
+
+#include "../Rendering/GameWindow.h"
 #include "../Rendering/Renderer.h"
 #include "../GameObjects/GameObject.h"
 #include <iostream>
@@ -22,11 +24,12 @@ private:
 
 	void OpenConsole();
 
+private:
+	HINSTANCE m_instance_handle = NULL;
+	GameWindow* m_window;
+	Renderer* m_renderer;
+	
+	std::vector<GameObject*> m_game_objects;
 	bool m_run;
-
-	bool skele_up;
-
-	Renderer* _renderer;
-	std::vector<GameObject*> _game_objects;
 };
 

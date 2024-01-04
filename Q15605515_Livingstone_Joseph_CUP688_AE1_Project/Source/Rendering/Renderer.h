@@ -7,12 +7,10 @@
 #include <DirectXColors.h>
 #include <DDSTextureLoader.h>
 
+#include "GameWindow.h"
 #include "../GameObjects/Camera.h"
 #include "Mesh.h"
 #include "External/text2D.h"
-
-#define SCREEN_WIDTH 800
-#define SCREEN_HEIGHT 600
 
 #define MAX_LIGHTS 12
 
@@ -69,7 +67,7 @@ public:
 	static Renderer* Instance;
 
 public:
-	Renderer(HINSTANCE instanceHandle, int nCmdShow);
+	Renderer(GameWindow* window);
 	~Renderer();
 
 	void Draw(std::vector<GameObject*> gameObjects);
@@ -78,13 +76,10 @@ public:
 	ID3D11Device* GetDevice() { return _device; }
 	ID3D11DeviceContext* GetDeviceContext() { return _device_context; }
 
-	HWND GetWindowHandle() { return _window_handle; }
-
 	Camera* GetActiveCamera() { return _camera; }
 	std::vector<Camera*> GetCameras() { return _cameras; }
 
 private:
-	HRESULT InitWindow(HINSTANCE instanceHandle, int nCmdShow);
 	HRESULT InitD3D();
 	HRESULT InitPipeline();
 	void CleanD3D();
@@ -96,6 +91,8 @@ private:
 	float counter = 0.0f;
 
 private:
+	GameWindow* m_window;
+
 	Camera* _camera;
 
 	unsigned int _current_cam = 0;
@@ -118,13 +115,9 @@ public:
 	void SwitchCamera();
 
 private:
-	const wchar_t* _window_name = L"Despacitios Free";
 	ID3D11Buffer* _const_buffer = NULL;
 	ID3D11Buffer* _pixel_const_buffer = NULL;
 	ID3D11Buffer* _skybox_const_buffer = NULL;
-
-	HINSTANCE _instance_handle = NULL;
-	HWND _window_handle = NULL;
 
 	ID3D11Device* _device = NULL;
 	ID3D11DeviceContext* _device_context = NULL;

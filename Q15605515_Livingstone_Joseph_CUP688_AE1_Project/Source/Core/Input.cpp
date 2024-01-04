@@ -1,5 +1,6 @@
 #include "Input.h"
 
+#include "../Rendering/GameWindow.h"
 #include "../Rendering/Renderer.h"
 #include "../GameObjects/Camera.h"
 
@@ -11,8 +12,8 @@ Mouse::ButtonStateTracker Input::msTracker;
 
 void Input::Initialize()
 {
-	Mouse::Get().SetWindow(Renderer::Instance->GetWindowHandle());
-	Mouse::Get().SetMode(Mouse::MODE_RELATIVE);
+	Mouse::Get().SetWindow(GameWindow::Instance->GetWindowHandle());
+	Mouse::Get().SetMode(Mouse::MODE_ABSOLUTE);
 }
 
 void Input::HandleInputs()

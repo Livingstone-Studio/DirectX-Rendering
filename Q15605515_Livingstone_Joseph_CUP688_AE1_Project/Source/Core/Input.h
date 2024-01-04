@@ -12,6 +12,7 @@ public:
 	static void Initialize();
 	static void HandleInputs();
 
+	static void SetMouseMode(DirectX::Mouse::Mode mode) { Mouse::Get().SetMode(mode); }
 
 private:
 	static Keyboard keyboard;
