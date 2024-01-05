@@ -24,7 +24,7 @@ public:
 	XMMATRIX GetViewMatrix();
 
 private:
-	float _speed = 0.001f;
+	float _speed = 0.25f;
 	bool _free_cam = false;
 };
 

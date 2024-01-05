@@ -8,9 +8,9 @@ Camera::Camera(bool free)
 
 	if (!_free_cam)
 	{
-		SetPosition({0.0f, 0.5f, 0.0f});
+		SetPosition({0.0f, 12.0f, 0.0f});
 		_transform.rot = { XM_PI - XM_PIDIV4, 0.0f, 0.0f };
-		_speed = 0.005f;
+		_speed = 0.25f;
 	}
 }
 

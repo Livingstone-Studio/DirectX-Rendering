@@ -59,6 +59,8 @@ struct PixelCBuffer
 {
 	Light AmbientLight; // 48 bytes
 	Light Lights[MAX_LIGHTS]; // 48 * 12 = 576 bytes
+
+	MaterialBuffer CurrentMaterial; // 64 bytes
 };
 
 class Renderer

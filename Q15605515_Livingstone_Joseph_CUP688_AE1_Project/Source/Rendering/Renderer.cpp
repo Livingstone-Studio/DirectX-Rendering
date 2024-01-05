@@ -75,7 +75,7 @@ Renderer::Renderer(GameWindow* window)
 	AmbientLight.Strength = 1;
 	AmbientLight.Position = { 0,0,0, 1 };
 	AmbientLight.Direction = { 0,0,0, 1 };
-	AmbientLight.Colour = { 0.3f, 0.3f, 0.3f, 1 };
+	AmbientLight.Colour = { 0.2f, 0.2f, 0.2f, 1 };
 	AmbientLight.SpotAngle = 0;
 
 	GameLights[0].Type = DIRECTIONAL_LIGHT;
@@ -83,22 +83,22 @@ Renderer::Renderer(GameWindow* window)
 	GameLights[0].Strength = 10;
 	GameLights[0].Position = { 0.0f, 0.0f,0.0f, 0.0f };
 	GameLights[0].Direction = { 0.96f, 0.4f, 0.75f, 0.3f };
-	GameLights[0].Colour = { 0.8f, 0.8f, 0.0f, 1.0f };
+	GameLights[0].Colour = { 0.1f, 0.1f, 0.2f, 1.0f };
 	GameLights[0].SpotAngle = 0;
 
 	GameLights[1].Type = POINT_LIGHT;
 	GameLights[1].Enabled = true;
 	GameLights[1].Strength = 10;
-	GameLights[1].Position = { 10.0f, 5.0f, 10.0f, 1.0f };
+	GameLights[1].Position = { 3.0f, 3.0f, 3.0f, 1.0f };
 	GameLights[1].Direction = { 0.0f, 0.0f, 0.0f, 1.0f };
-	GameLights[1].Colour = DirectX::Colors::Red;
+	GameLights[1].Colour = DirectX::Colors::Orange;
 	GameLights[1].SpotAngle = 45;
 
 	GameLights[2].Type = SPOT_LIGHT;
 	GameLights[2].Enabled = true;
 	GameLights[2].Strength = 100;
-	GameLights[2].Position = { 0.0f, 6.0f, 0.0f, 1.0f };
-	GameLights[2].Direction = { 0.0f, 1.0f, 0.0f, 1.0f };
+	GameLights[2].Position = { -15.0f, 30.0f, -15.0f, 1.0f };
+	GameLights[2].Direction = { 0.0f, -1.0f, 0.0f, 1.0f };
 	GameLights[2].Colour = DirectX::Colors::Aqua;
 	GameLights[2].SpotAngle = 30;
 }
@@ -141,17 +141,6 @@ void Renderer::Draw(std::vector<GameObject*> gameObjects)
 		_device_context->IASetIndexBuffer(visual->GetIndexBuffer(), DXGI_FORMAT_R32_UINT, 0);
 		_device_context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		
-		if (visual->Transparency)
-		{
-			_device_context->OMSetBlendState(_alpha_blend_enabled, 0, 0xffffffff);
-			_device_context->RSSetState(_rasterizer_no_culling);
-		}
-
-
-		_device_context->PSSetSamplers(0, 1, visual->GetSampler());
-		_device_context->PSSetShaderResources(0, 1, visual->GetTexture());
-
-
 		CBUFFER0 cbuffer;
 		XMMATRIX translation, rotation, scale;
 		XMMATRIX world, view, projection;
@@ -200,15 +189,48 @@ void Renderer::Draw(std::vector<GameObject*> gameObjects)
 		_device_context->UpdateSubresource(_const_buffer, 0, 0, &cbuffer, 0, 0);
 		_device_context->VSSetConstantBuffers(0, 1, &_const_buffer);
 
-		_device_context->UpdateSubresource(_pixel_const_buffer, 0, 0, &pixelCBuffer, 0, 0);
-		_device_context->PSSetConstantBuffers(0, 1, &_pixel_const_buffer);
-		
-		_device_context->DrawIndexed(visual->GetMesh().Indices.size(), 0, 0);
-
-		if (visual->Transparency)
+		for (int i = 0; i < visual->GetMesh().MaterialIndexs.size(); ++i)
 		{
-			_device_context->OMSetBlendState(_alpha_blend_disabled, 0, 0xffffffff);
-			_device_context->RSSetState(_rasterizer_back_culling);
+			int index = visual->GetMesh().MaterialIndexs[i];
+			Material material = AssetManager::GetMaterials()[(visual->GetMesh().Materials.at(index))];
+
+
+			if (material.Illumination == 6)
+			{
+				_device_context->OMSetBlendState(_alpha_blend_enabled, 0, 0xffffffff);
+				_device_context->RSSetState(_rasterizer_no_culling);
+			}
+
+			pixelCBuffer.CurrentMaterial.Emissive = material.Emissive;
+			pixelCBuffer.CurrentMaterial.Ambient  = material.Ambient ;
+			pixelCBuffer.CurrentMaterial.Diffuse  = material.Diffuse ;
+			pixelCBuffer.CurrentMaterial.Specular = material.Specular;
+			pixelCBuffer.CurrentMaterial.SpecularExponent = material.SpecularExponent;
+
+			if (material.DiffuseMap.size() > 0)
+			{
+				ID3D11ShaderResourceView* diffuse_texture = AssetManager::GetTexture(material.DiffuseMap);
+				if (diffuse_texture)
+					_device_context->PSSetShaderResources(0, 1, &diffuse_texture);
+			}
+
+			_device_context->UpdateSubresource(_pixel_const_buffer, 0, 0, &pixelCBuffer, 0, 0);
+			_device_context->PSSetConstantBuffers(0, 1, &_pixel_const_buffer);
+
+			int end = i + 1;
+			if (end >= visual->GetMesh().MaterialIndexs.size())
+				end = visual->GetMesh().Vertices.size();
+			else
+				end = visual->GetMesh().MaterialIndexs[end];
+			end = end - (index);
+
+			_device_context->Draw(end, index);
+
+			if (material.Illumination == 6)
+			{
+				_device_context->OMSetBlendState(_alpha_blend_disabled, 0, 0xffffffff);
+				_device_context->RSSetState(_rasterizer_back_culling);
+			}
 		}
 	}
 

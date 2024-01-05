@@ -4,6 +4,25 @@
 #define POINT_LIGHT 2
 #define SPOT_LIGHT 3
 
+struct Material
+{    
+	//16 bytes
+    int Id; // 4 bytes
+    float3 Ambient; // 12 bytes
+	
+	// 16 bytes
+    float3 Diffuse; // 12 bytes
+    float padding1; // 4 bytes
+
+	// 16 bytes
+    float3 Specular; // 12 bytes
+    float SpecularExponent; // 4 bytes
+    
+	// 16 bytes
+    float3 Emissive; // 12 bytes
+    float padding2; // 4 bytes
+};
+
 // 48 bytes
 struct Light
 {
@@ -27,9 +46,11 @@ cbuffer PixelCBuffer : register(b0)
 {
     Light AmbientLight; // 48 bytes
     Light Lights[MAX_LIGHTS]; // 48 * 12 = 576 bytes
+    
+    Material CurrentMaterial;
 };
 
-Texture2D texture0;
+Texture2D texture0; // diffuse
 sampler sampler0;
 
 struct LightInfo
@@ -47,7 +68,7 @@ float4 CalculateDiffuse(Light light, float3 L, float3 N)
 float4 CalculateSpecular(Light light, float3 L, float3 N, float3 V)
 {
     float3 R = normalize(reflect(-L, N));
-    float specular = pow(max(0, dot(R, V)), 2);
+    float specular = pow(max(0, dot(R, V)), CurrentMaterial.SpecularExponent);
     return light.Colour * specular;
 }
 
@@ -73,8 +94,7 @@ LightInfo DirectionalLight(Light light, float3 N, float3 Ep, float3 Wp)
     
     LightInfo lightInfo;    
     lightInfo.Diffuse = CalculateDiffuse(light, L, N);
-    //lightInfo.Specular = CalculateSpecular(light, L, N, V); NEED DIRECTIONAL LIGHTING FIX
-    lightInfo.Specular = 0;
+    lightInfo.Specular = CalculateSpecular(light, L, N, V); //NEED DIRECTIONAL LIGHTING FIX
     return lightInfo;
 }
 
@@ -147,9 +167,14 @@ float4 main(float4 position : SV_Position, float4 color : COLOR, float2 uv : TEX
 
     totalInfo.Diffuse = saturate(totalInfo.Diffuse);
     totalInfo.Specular = saturate(totalInfo.Specular);
+        
+    float3 e = CurrentMaterial.Emissive;
+    float3 a = CurrentMaterial.Ambient * AmbientLight.Colour.xyz;
+    float3 d = CurrentMaterial.Diffuse * totalInfo.Diffuse.xyz;
+    float3 s = CurrentMaterial.Specular * totalInfo.Specular.xyz;
     
-    float4 finalColor = AmbientLight.Colour + totalInfo.Diffuse + totalInfo.Specular;
-    
+    float4 finalColor = float4(a + d + s + e, 1);
+        
     float4 sampled = texture0.Sample(sampler0, uv);
     return finalColor * sampled;
 }

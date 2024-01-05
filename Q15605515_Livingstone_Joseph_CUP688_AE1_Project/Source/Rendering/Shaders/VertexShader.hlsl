@@ -1,4 +1,3 @@
-
 cbuffer CBuffer0 : register(b0)
 {
     matrix WVP;
@@ -18,10 +17,10 @@ struct VIn
 
 struct VOut
 {
-	float4 position : SV_Position;
+    float4 position : SV_Position;
     float4 color : COLOR;
     float2 uv : TEXCOORD;
-    float3 pos : TEXCOORD1;    
+    float3 pos : TEXCOORD1;
     float3 normal : TEXCOORD2;
     float3 world_pos : TEXCOORD3;
     float3 world_normal : TEXCOORD4;
@@ -40,6 +39,6 @@ VOut main(VIn vin)
 
     vout.world_pos = mul(world_matrix, float4(vin.position, 1));
     vout.world_normal = mul(inverse_world_matrix, float4(vin.norm, 1)).xyz;
-
+            
 	return vout;
 }

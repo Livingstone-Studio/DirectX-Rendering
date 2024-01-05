@@ -2,6 +2,7 @@
 
 #include "Time.h"
 #include "Input.h"
+#include "AssetManager.h"
 #include "../GameObjects/Camera.h"
 
 int Application::Execute(HINSTANCE instanceHandle, int nCmdShow)
@@ -23,10 +24,10 @@ void Application::Initialize(HINSTANCE instanceHandle, int nCmdShow)
 
     m_game_objects.push_back(
         new GameObject(L"Assets/western_demo.obj",
-            L"Assets/rock.jpg",
+            L"Assets/PolygonWestern_Texture_01_A.png",
             false,
-            { { 0.0f, 0.0f, 0.0f }, {0.0f, XM_PI, 0.0f},
-            { 0.05f, 0.05f, 0.05f } })); 
+            { { 0.0f, 0.0f, 0.0f }, {0.0f, 0.0f, 0.0f},
+            { 1.0f, 1.0f, 1.0f } })); 
 
     Input::Initialize();
 
@@ -69,6 +70,8 @@ void Application::Cleanup()
         m_game_objects[i] = nullptr;
     }
     m_game_objects.clear();
+
+    AssetManager::Cleanup();
 
     if (m_window)
         delete m_window;
