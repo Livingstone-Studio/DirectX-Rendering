@@ -9,59 +9,14 @@
 
 #include "GameWindow.h"
 #include "../GameObjects/Camera.h"
-#include "Mesh.h"
+#include "../GlobalDefinitions.h"
+#include "RendererDefinitions.h"
 #include "External/text2D.h"
-
-#define MAX_LIGHTS 12
-
-#define DIRECTIONAL_LIGHT 1
-#define POINT_LIGHT 2
-#define SPOT_LIGHT 3
 
 using namespace DirectX;
 
 class Camera;
 class GameObject;
-
-struct CBUFFER0
-{
-	XMMATRIX WVP;
-	XMVECTOR cameraPos;
-	XMVECTOR objectWorldPos;
-	XMMATRIX worldMatrix;
-	XMMATRIX inverseWorldMatrix;
-};
-
-struct SKYBOXCBUFFER0
-{
-	XMMATRIX WVP;
-};
-
-struct Light
-{
-	// 16 bytes
-	int Type = 0; // 4 bytes
-	bool Enabled = false; // 4 bytes
-	float Strength = 0; // 4 bytes
-	float SpotAngle = 0; // 4 bytes
-
-	// 16 bytes
-	XMVECTOR Position = { 0,0,0,0 }; // 16 bytes
-
-	// 16 bytes
-	XMVECTOR Direction = { 0,0,0,0 }; // 16 bytes
-
-	// 16 bytes
-	XMVECTOR Colour = Colors::White; // 16 bytes
-};
-
-struct PixelCBuffer
-{
-	Light AmbientLight; // 48 bytes
-	Light Lights[MAX_LIGHTS]; // 48 * 12 = 576 bytes
-
-	MaterialBuffer CurrentMaterial; // 64 bytes
-};
 
 class Renderer
 {
@@ -75,87 +30,79 @@ public:
 	void Draw(std::vector<GameObject*> gameObjects);
 	void DrawSkybox();
 
-	ID3D11Device* GetDevice() { return _device; }
-	ID3D11DeviceContext* GetDeviceContext() { return _device_context; }
-
 	Camera* GetActiveCamera() { return _camera; }
 	std::vector<Camera*> GetCameras() { return _cameras; }
+
+	const int& GetFreeLight();
+
+	Light AmbientLight;
+	Light GameLights[MAX_LIGHTS];
 
 private:
 	HRESULT InitD3D();
 	HRESULT InitPipeline();
 	void CleanD3D();
 
-	HRESULT LoadVertexShader(LPCWSTR filename, ID3D11VertexShader** vs, ID3D11InputLayout** il);
-	HRESULT LoadPixelShader(LPCWSTR filename, ID3D11PixelShader** ps);
 
 	Text2D* _fps_counter;
-	float counter = 0.0f;
-
-private:
-	GameWindow* m_window;
-
-	Camera* _camera;
-
-	unsigned int _current_cam = 0;
-	std::vector<Camera*> _cameras;
-
-	XMVECTOR _ambient_light_colour = { 0.1f, 0.1f, 0.1f, 0.1f };
-	XMVECTOR _directional_light_direction = { 0.2788f, 0.7063f, 0.6506f };
-	XMVECTOR _directional_light_colour = { 0.96f, 0.8f, 0.75f, 1.0f };
-
-	XMVECTOR _skybox_ambient_light_colour = { 0.7f, 0.7f, 0.7f, 0.7f };
-	XMVECTOR _skybox_directional_light_direction = { 0.2788f, 0.7063f, 0.6506f };
-	XMVECTOR _skybox_directional_light_colour = { 0.0f, 0.0f, 0.0f, 0.0f };
-
-	bool Up;
 
 public:
 	void SetCamera(Camera* cam) { _camera = cam; }
 	Camera* GetCamera() { return _camera; }
-
 	void SwitchCamera();
 
+	Camera* _camera;
+	unsigned int _current_cam = 0;
+	std::vector<Camera*> _cameras;
+
 private:
-	ID3D11Buffer* _const_buffer = NULL;
-	ID3D11Buffer* _pixel_const_buffer = NULL;
-	ID3D11Buffer* _skybox_const_buffer = NULL;
+	// Skybox Information
+	ModelData m_skybox;
+	ID3D11Buffer* m_skybox_vertex_buffer = NULL;
+	ID3D11SamplerState* m_skybox_sampler = NULL;
+	ID3D11ShaderResourceView* m_skybox_texture = NULL;
 
-	ID3D11Device* _device = NULL;
-	ID3D11DeviceContext* _device_context = NULL;
-	IDXGISwapChain* _swapchain = NULL;
+public:
+	// Core DirectX Functionality Getters.
+	GameWindow* GetGameWindow() { return m_window; }
+	IDXGISwapChain* GetSwapChain() { return m_swapchain; }
+	ID3D11Device* GetDevice() { return m_device; }
+	ID3D11DeviceContext* GetDeviceContext() { return m_device_context; }
+	ID3D11RenderTargetView* GetBackBuffer() { return m_back_buffer; }
+	ID3D11DepthStencilView* GetDepthBuffer() { return m_depth_buffer; }
 
-	ID3D11InputLayout* _default_layout = NULL;
-	ID3D11InputLayout* _skybox_layout = NULL;
+private:
+	// Core DirectX Rendering Info.
+	GameWindow* m_window;
+	IDXGISwapChain* m_swapchain = NULL;
+	ID3D11Device* m_device = NULL;
+	ID3D11DeviceContext* m_device_context = NULL;
+	ID3D11RenderTargetView* m_back_buffer = NULL;
+	ID3D11DepthStencilView* m_depth_buffer = NULL;
 
-	ID3D11RenderTargetView* _back_buffer = NULL;
+public:
+	// Stores functionality for loading shaders.
+	HRESULT LoadVertexShader(LPCWSTR filename, ID3D11VertexShader** vs, ID3D11InputLayout** il);
+	HRESULT LoadPixelShader(LPCWSTR filename, ID3D11PixelShader** ps);
 
-	ID3D11DepthStencilView* _depth_buffer = NULL;
+	// DirectX Stores/Settings Getters.
+	ID3D11Buffer* GetConstBuffer(const unsigned int& type) { return m_buffers[type]; }
+	ID3D11RasterizerState* GetRasterizerState(const unsigned int& type) { return m_rast_states[type]; }
+	ID3D11BlendState* GetBlendState(const unsigned int& type) { return m_blend_states[type]; }
+	ID3D11InputLayout* GetInputLayout(const unsigned int& type) { return m_layouts[type]; }
+	ID3D11DepthStencilState* GetDepthStencilState(const unsigned int& type) { return m_depth_states[type]; }
+	ID3D11VertexShader* GetVertexShader(const unsigned int& type) { return m_vertex_shaders[type]; }
+	ID3D11PixelShader* GetPixelShader(const unsigned int& type) { return m_pixel_shaders[type]; }
 
-	ID3D11DepthStencilState* _solid_depth_write = NULL;
-	ID3D11DepthStencilState* _no_depth_write = NULL;
+private:
+	// Array storage for various different DirectX stores/settings.
+	ID3D11Buffer* m_buffers[BUFFER_COUNT] = { NULL, NULL, NULL };
+	ID3D11RasterizerState* m_rast_states[RAST_STATE_COUNT] = { NULL, NULL, NULL };
+	ID3D11BlendState* m_blend_states[BLEND_STATE_COUNT] = { NULL, NULL };
+	ID3D11InputLayout* m_layouts[INPUT_LAYOUT_COUNT] = { NULL, NULL };
+	ID3D11DepthStencilState* m_depth_states[DEPTH_STATE_COUNT] = { NULL, NULL };
+	ID3D11VertexShader* m_vertex_shaders[VERTEX_SHADER_COUNT] = { NULL, NULL };
+	ID3D11PixelShader* m_pixel_shaders[PIXEL_SHADER_COUNT] = { NULL, NULL };
 
-	ID3D11BlendState* _alpha_blend_enabled = NULL;
-	ID3D11BlendState* _alpha_blend_disabled = NULL;
-
-	ID3D11RasterizerState* _rasterizer_no_culling = NULL;
-	ID3D11RasterizerState* _rasterizer_back_culling = NULL;
-	ID3D11RasterizerState* _rasterizer_front_culling = NULL;
-
-	ID3D11VertexShader* _default_vertex_shader = NULL;
-	ID3D11PixelShader* _default_pixel_shader = NULL;
-
-	ID3D11VertexShader* _skybox_vertex_shader = NULL;
-	ID3D11PixelShader* _skybox_pixel_shader = NULL;
-
-
-	Mesh _skybox;
-	ID3D11Buffer* _skybox_vertex_buffer = NULL;
-	ID3D11SamplerState* _skybox_sampler = NULL;
-	ID3D11ShaderResourceView* _skybox_texture = NULL;
-
-
-	Light AmbientLight;
-	Light GameLights[MAX_LIGHTS];
 };
 

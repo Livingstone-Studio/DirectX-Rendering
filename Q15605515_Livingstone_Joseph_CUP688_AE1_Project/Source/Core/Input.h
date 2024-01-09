@@ -14,12 +14,17 @@ public:
 
 	static void SetMouseMode(DirectX::Mouse::Mode mode) { Mouse::Get().SetMode(mode); }
 
+	static const Keyboard::State& GetKeyboardState() { return kbState; }
+	static const Mouse::State& GetMouseState() { return msState; }
+
 private:
 	static Keyboard keyboard;
 	static Keyboard::KeyboardStateTracker kbStateTracker;
+	static Keyboard::State kbState;
 
 	static Mouse mouse;
 	static Mouse::ButtonStateTracker msTracker;	
+	static Mouse::State msState;
 	
 public:
 	static LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);

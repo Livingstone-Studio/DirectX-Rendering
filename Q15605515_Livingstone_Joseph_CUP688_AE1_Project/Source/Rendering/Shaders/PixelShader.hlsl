@@ -7,7 +7,7 @@
 struct Material
 {    
 	//16 bytes
-    int Id; // 4 bytes
+    float TextureID; // 4 bytes
     float3 Ambient; // 12 bytes
 	
 	// 16 bytes
@@ -47,7 +47,7 @@ cbuffer PixelCBuffer : register(b0)
     Light AmbientLight; // 48 bytes
     Light Lights[MAX_LIGHTS]; // 48 * 12 = 576 bytes
     
-    Material CurrentMaterial;
+    Material CurrentMaterial; // 64 bytes
 };
 
 Texture2D texture0; // diffuse
@@ -143,12 +143,13 @@ float4 main(float4 position : SV_Position, float4 color : COLOR, float2 uv : TEX
     totalInfo.Specular = float4(0, 0, 0, 0);
     for (int i = 0; i < MAX_LIGHTS; ++i)
     {
+        if (!Lights[i].Enabled)
+            continue;        
         LightInfo info;
         info.Diffuse = float4(0, 0, 0, 0);
         info.Specular = float4(0, 0, 0, 0);
-        if (!Lights[i].Enabled)
-            continue;        
-        switch (Lights[i].Type)
+
+        switch ((int)Lights[i].Type)
         {
             case DIRECTIONAL_LIGHT:
                 info = DirectionalLight(Lights[i], normal, cam_pos, world_pos);
@@ -167,7 +168,8 @@ float4 main(float4 position : SV_Position, float4 color : COLOR, float2 uv : TEX
 
     totalInfo.Diffuse = saturate(totalInfo.Diffuse);
     totalInfo.Specular = saturate(totalInfo.Specular);
-        
+           
+    
     float3 e = CurrentMaterial.Emissive;
     float3 a = CurrentMaterial.Ambient * AmbientLight.Colour.xyz;
     float3 d = CurrentMaterial.Diffuse * totalInfo.Diffuse.xyz;
@@ -175,6 +177,11 @@ float4 main(float4 position : SV_Position, float4 color : COLOR, float2 uv : TEX
     
     float4 finalColor = float4(a + d + s + e, 1);
         
-    float4 sampled = texture0.Sample(sampler0, uv);
-    return finalColor * sampled;
+    if ((int)CurrentMaterial.TextureID == 1)
+    {    
+        float4 sampled = texture0.Sample(sampler0, uv);
+        finalColor = finalColor * sampled;
+    }
+    
+    return finalColor;
 }

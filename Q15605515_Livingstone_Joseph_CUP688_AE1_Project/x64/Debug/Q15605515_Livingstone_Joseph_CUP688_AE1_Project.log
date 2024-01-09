@@ -1,0 +1,3 @@
+﻿  Player.cpp
+C:\Users\jwliv\Documents\Uni\Year 3\Sem 1\AGP\Assessment\GitHub\DirectX-Rendering build\Q15605515_Livingstone_Joseph_CUP688_AE1_Project\Source\Core\Time.h(10,35): warning C4244: 'return': conversion from 'double' to 'int', possible loss of data
+  Q15605515_Livingstone_Joseph_CUP688_AE1_Project.vcxproj -> C:\Users\jwliv\Documents\Uni\Year 3\Sem 1\AGP\Assessment\GitHub\DirectX-Rendering build\x64\Debug\Q15605515_Livingstone_Joseph_CUP688_AE1_Project.exe

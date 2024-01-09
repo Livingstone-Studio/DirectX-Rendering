@@ -2,11 +2,11 @@
 
 #include "../Core/Time.h"
 #include "../Core/Input.h"
-#include "../Core/AssetManager.h"
 #include "../Rendering/External/ReadData.h"
 #include "../GameObjects/GameObject.h"
 #include "../GameObjects/Camera.h"
-#include "../GameObjects/IVisualObject.h"
+#include "OBJ/ObjModelLoader.h"
+#include "OBJ/Model.h"
 #include <chrono>
 #include <iostream>
 
@@ -36,31 +36,21 @@ Renderer::Renderer(GameWindow* window)
 		return;
 	}
 
-
-
 	D3D11_BUFFER_DESC cbd = { 0 };
 	cbd.Usage = D3D11_USAGE_DEFAULT;
 	cbd.ByteWidth = sizeof(CBUFFER0);
 	cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	HRESULT result = _device->CreateBuffer(&cbd, NULL, &_const_buffer);
+	HRESULT result = m_device->CreateBuffer(&cbd, NULL, &m_buffers[DEFAULT_VERTEX_BUFFER]);
 	if (FAILED(result))
-	{
 		OutputDebugString(L"Failed to create constant buffer.");
-	}
-	
 	cbd.ByteWidth = sizeof(PixelCBuffer);
-	result = _device->CreateBuffer(&cbd, NULL, &_pixel_const_buffer);
+	result = m_device->CreateBuffer(&cbd, NULL, &m_buffers[DEFAULT_PIXEL_BUFFER]);
 	if (FAILED(result))
-	{
 		OutputDebugString(L"Failed to create constant buffer.");
-	}
-
 	cbd.ByteWidth = sizeof(SKYBOXCBUFFER0);
-	result = _device->CreateBuffer(&cbd, NULL, &_skybox_const_buffer);
+	result = m_device->CreateBuffer(&cbd, NULL, &m_buffers[SKYBOX_CONSTANT_BUFFER]); // HREE
 	if (FAILED(result))
-	{
 		OutputDebugString(L"Failed to create constant buffer.");
-	}
 
 	Instance = this;
 
@@ -68,39 +58,23 @@ Renderer::Renderer(GameWindow* window)
 	_cameras.push_back(new Camera(true));
 	_camera = _cameras[_current_cam];
 
-	_fps_counter = new Text2D("Assets/font1.png", _device, _device_context);
+	_fps_counter = new Text2D("Assets/font1.png", m_device, m_device_context);
 
 	AmbientLight.Type = 0;
 	AmbientLight.Enabled = true;
 	AmbientLight.Strength = 1;
 	AmbientLight.Position = { 0,0,0, 1 };
 	AmbientLight.Direction = { 0,0,0, 1 };
-	AmbientLight.Colour = { 0.2f, 0.2f, 0.2f, 1 };
+	AmbientLight.Colour = { 0.02f, 0.02f, 0.02f, 1 };
 	AmbientLight.SpotAngle = 0;
 
 	GameLights[0].Type = DIRECTIONAL_LIGHT;
 	GameLights[0].Enabled = true;
-	GameLights[0].Strength = 10;
+	GameLights[0].Strength = 1;
 	GameLights[0].Position = { 0.0f, 0.0f,0.0f, 0.0f };
 	GameLights[0].Direction = { 0.96f, 0.4f, 0.75f, 0.3f };
 	GameLights[0].Colour = { 0.1f, 0.1f, 0.2f, 1.0f };
 	GameLights[0].SpotAngle = 0;
-
-	GameLights[1].Type = POINT_LIGHT;
-	GameLights[1].Enabled = true;
-	GameLights[1].Strength = 10;
-	GameLights[1].Position = { 3.0f, 3.0f, 3.0f, 1.0f };
-	GameLights[1].Direction = { 0.0f, 0.0f, 0.0f, 1.0f };
-	GameLights[1].Colour = DirectX::Colors::Orange;
-	GameLights[1].SpotAngle = 45;
-
-	GameLights[2].Type = SPOT_LIGHT;
-	GameLights[2].Enabled = true;
-	GameLights[2].Strength = 100;
-	GameLights[2].Position = { -15.0f, 30.0f, -15.0f, 1.0f };
-	GameLights[2].Direction = { 0.0f, -1.0f, 0.0f, 1.0f };
-	GameLights[2].Colour = DirectX::Colors::Aqua;
-	GameLights[2].SpotAngle = 30;
 }
 
 Renderer::~Renderer()
@@ -108,7 +82,7 @@ Renderer::~Renderer()
 	for (int i = 0; i < _cameras.size(); ++i)
 	{
 		if (!_cameras[i])
-			continue;		
+			continue;
 		delete _cameras[i];
 		_cameras[i] = nullptr;
 	}
@@ -118,133 +92,34 @@ Renderer::~Renderer()
 
 void Renderer::Draw(std::vector<GameObject*> gameObjects)
 {
-	_device_context->ClearRenderTargetView(_back_buffer, Colors::RosyBrown);
+	m_device_context->ClearRenderTargetView(m_back_buffer, Colors::RosyBrown);
 
 	if (!_camera)
 		return;
 
 	DrawSkybox();
-	
-	_device_context->ClearDepthStencilView(_depth_buffer, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
+	m_device_context->ClearDepthStencilView(m_depth_buffer, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+
+	Model* model;
 	for (int i = 0; i < gameObjects.size(); ++i)
 	{
-		if (!gameObjects[i] || gameObjects[i] == _camera)
+		if (!gameObjects[i])
 			continue;
-		IVisualObject* visual = dynamic_cast<IVisualObject*>(gameObjects[i]);
-		if (!visual)
-			continue;
-
-		UINT stride = sizeof(Vertex);
-		UINT offset = 0;
-		_device_context->IASetVertexBuffers(0, 1, visual->GetVertexBuffer(), &stride, &offset);
-		_device_context->IASetIndexBuffer(visual->GetIndexBuffer(), DXGI_FORMAT_R32_UINT, 0);
-		_device_context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		
-		CBUFFER0 cbuffer;
-		XMMATRIX translation, rotation, scale;
-		XMMATRIX world, view, projection;
-
-		// View
-		view = _camera->GetViewMatrix();
-
-		// Projection
-		projection = XMMatrixPerspectiveFovLH(XMConvertToRadians(60), m_window->GetScreenSize()[0] / m_window->GetScreenSize()[1], 0.01f, 1000.0f);
-
-
-		// World
-		world = gameObjects[i]->GetTransform().GetWorldMatrix();
-		cbuffer.worldMatrix = world;
-		cbuffer.WVP = world * view * projection;
-
-		cbuffer.inverseWorldMatrix = XMMatrixTranspose(XMMatrixInverse(nullptr, world));
-
-		XMFLOAT3 position = gameObjects[i]->GetTransform().pos;
-		cbuffer.objectWorldPos = XMLoadFloat3(&position);
-		position = _camera->GetPosition();
-		cbuffer.cameraPos = XMLoadFloat3(&position);
-
-
-		XMMATRIX transpose = XMMatrixTranspose(world);
-		PixelCBuffer pixelCBuffer;
-		pixelCBuffer.AmbientLight = AmbientLight;
-		for (int i = 0; i < MAX_LIGHTS; ++i)
-		{
-			if (!GameLights[i].Enabled)
-				continue;
-			pixelCBuffer.Lights[i].Type = GameLights[i].Type;
-			pixelCBuffer.Lights[i].Enabled = GameLights[i].Enabled;
-			pixelCBuffer.Lights[i].Strength = GameLights[i].Strength;
-			pixelCBuffer.Lights[i].Position = GameLights[i].Position;
-
-			XMVECTOR light_dir = XMVector3Transform(GameLights[i].Direction, transpose);
-			pixelCBuffer.Lights[i].Direction = light_dir;
-			
-			pixelCBuffer.Lights[i].Colour = GameLights[i].Colour;
-
-			pixelCBuffer.Lights[i].SpotAngle = XMConvertToRadians(GameLights[i].SpotAngle);
-
-		}
-
-		_device_context->UpdateSubresource(_const_buffer, 0, 0, &cbuffer, 0, 0);
-		_device_context->VSSetConstantBuffers(0, 1, &_const_buffer);
-
-		for (int i = 0; i < visual->GetMesh().MaterialIndexs.size(); ++i)
-		{
-			int index = visual->GetMesh().MaterialIndexs[i];
-			Material material = AssetManager::GetMaterials()[(visual->GetMesh().Materials.at(index))];
-
-
-			if (material.Illumination == 6)
-			{
-				_device_context->OMSetBlendState(_alpha_blend_enabled, 0, 0xffffffff);
-				_device_context->RSSetState(_rasterizer_no_culling);
-			}
-
-			pixelCBuffer.CurrentMaterial.Emissive = material.Emissive;
-			pixelCBuffer.CurrentMaterial.Ambient  = material.Ambient ;
-			pixelCBuffer.CurrentMaterial.Diffuse  = material.Diffuse ;
-			pixelCBuffer.CurrentMaterial.Specular = material.Specular;
-			pixelCBuffer.CurrentMaterial.SpecularExponent = material.SpecularExponent;
-
-			if (material.DiffuseMap.size() > 0)
-			{
-				ID3D11ShaderResourceView* diffuse_texture = AssetManager::GetTexture(material.DiffuseMap);
-				if (diffuse_texture)
-					_device_context->PSSetShaderResources(0, 1, &diffuse_texture);
-			}
-
-			_device_context->UpdateSubresource(_pixel_const_buffer, 0, 0, &pixelCBuffer, 0, 0);
-			_device_context->PSSetConstantBuffers(0, 1, &_pixel_const_buffer);
-
-			int end = i + 1;
-			if (end >= visual->GetMesh().MaterialIndexs.size())
-				end = visual->GetMesh().Vertices.size();
-			else
-				end = visual->GetMesh().MaterialIndexs[end];
-			end = end - (index);
-
-			_device_context->Draw(end, index);
-
-			if (material.Illumination == 6)
-			{
-				_device_context->OMSetBlendState(_alpha_blend_disabled, 0, 0xffffffff);
-				_device_context->RSSetState(_rasterizer_back_culling);
-			}
-		}
+		model = gameObjects[i]->GetModel();
+		if (model)
+			model->Draw(this);
 	}
 
 	if (_fps_counter)
 	{
-		counter += Time::GetDeltaTime();
-
 		_fps_counter->AddText(to_string(Time::GetFPS()), -1, +1, 0.075f);
-		_device_context->OMSetBlendState(_alpha_blend_enabled, 0, 0xffffffff);
+		m_device_context->OMSetBlendState(GetBlendState(BLEND_ENABLED), 0, 0xffffffff);
 		_fps_counter->RenderText();
-		_device_context->OMSetBlendState(_alpha_blend_disabled, 0, 0xffffffff);
+		m_device_context->OMSetBlendState(GetBlendState(BLEND_DISABLED), 0, 0xffffffff);
 	}
 
-	_swapchain->Present(0, 0);
+	m_swapchain->Present(0, 0);
 }
 
 void Renderer::DrawSkybox()
@@ -252,12 +127,13 @@ void Renderer::DrawSkybox()
 	if (!_camera)
 		return;
 
-	_device_context->OMSetDepthStencilState(_no_depth_write, 1);
-	_device_context->RSSetState(_rasterizer_front_culling);
+	m_device_context->OMSetDepthStencilState(GetDepthStencilState(NONE_DEPTH_STATE), 1);
+	m_device_context->RSSetState(GetRasterizerState(RAST_FRONT_CULL));
 
-	_device_context->VSSetShader(_skybox_vertex_shader, 0, 0);
-	_device_context->PSSetShader(_skybox_pixel_shader, 0, 0);
-	_device_context->IASetInputLayout(_skybox_layout);
+	m_device_context->VSSetShader(GetVertexShader(SKYBOX_VERTEX_SHADER), 0, 0);
+	m_device_context->PSSetShader(GetPixelShader(SKYBOX_PIXEL_SHADER), 0, 0);
+	m_device_context->IASetInputLayout(GetInputLayout(SKYBOX_INPUT_LAYOUT));
+	m_device_context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	SKYBOXCBUFFER0 sbcbuff;
 
@@ -266,23 +142,32 @@ void Renderer::DrawSkybox()
 	projection = XMMatrixPerspectiveFovLH(XMConvertToRadians(60), m_window->GetScreenSize()[0] / m_window->GetScreenSize()[1], 0.1f, 100.0f);
 	view = _camera->GetViewMatrix();
 	sbcbuff.WVP = translation * view * projection;
-	_device_context->UpdateSubresource(_skybox_const_buffer, 0, 0, &sbcbuff, 0, 0);
+	m_device_context->UpdateSubresource(m_buffers[SKYBOX_CONSTANT_BUFFER], 0, 0, &sbcbuff, 0, 0);
 
-	_device_context->VSSetConstantBuffers(0, 1, &_skybox_const_buffer);
-	_device_context->PSGetSamplers(0, 1, &_skybox_sampler);
-	_device_context->PSSetShaderResources(0, 1, &_skybox_texture);
+	m_device_context->VSSetConstantBuffers(0, 1, &m_buffers[SKYBOX_CONSTANT_BUFFER]);
+	m_device_context->PSSetSamplers(0, 1, &m_skybox_sampler);
+	m_device_context->PSSetShaderResources(0, 1, &m_skybox_texture);
 
 	UINT stride = sizeof(Vertex);
 	UINT offset = 0;
-	_device_context->IASetVertexBuffers(0, 1, &_skybox_vertex_buffer, &stride, &offset);
-	_device_context->Draw(_skybox.Vertices.size(), 0);
+	m_device_context->IASetVertexBuffers(0, 1, &m_skybox_vertex_buffer, &stride, &offset);
+	m_device_context->Draw(m_skybox.vertices.size(), 0);
 
-	_device_context->OMSetDepthStencilState(_solid_depth_write, 1);
-	_device_context->RSSetState(_rasterizer_back_culling);
+	m_device_context->OMSetDepthStencilState(GetDepthStencilState(SOLID_DEPTH_STATE), 1);
+	m_device_context->RSSetState(GetRasterizerState(RAST_BACK_CULL));
 
-	_device_context->VSSetShader(_default_vertex_shader, 0, 0);
-	_device_context->PSSetShader(_default_pixel_shader, 0, 0);
-	_device_context->IASetInputLayout(_default_layout);
+
+	m_device_context->VSSetShader(GetVertexShader(DEFAULT_VERTEX_SHADER), 0, 0);
+	m_device_context->PSSetShader(GetPixelShader(DEFAULT_PIXEL_SHADER), 0, 0);
+	m_device_context->IASetInputLayout(GetInputLayout(DEFAULT_INPUT_LAYOUT));
+}
+
+const int& Renderer::GetFreeLight()
+{
+	for (int i = 0; i < MAX_LIGHTS; ++i)
+		if (!GameLights[i].Enabled)
+			return i;
+	return -1;
 }
 
 HRESULT Renderer::InitD3D()
@@ -312,18 +197,18 @@ HRESULT Renderer::InitD3D()
 		NULL,
 		D3D11_SDK_VERSION,
 		&scd,
-		&_swapchain,
-		&_device,
+		&m_swapchain,
+		&m_device,
 		NULL,
-		&_device_context);
+		&m_device_context);
 
 	if (FAILED(hr))
 		return hr;
 
 	ID3D11Texture2D* pBackBufferTexture = nullptr;
-	hr = _swapchain->GetBuffer(0, _uuidof(ID3D11Texture2D), (LPVOID*)&pBackBufferTexture);
+	hr = m_swapchain->GetBuffer(0, _uuidof(ID3D11Texture2D), (LPVOID*)&pBackBufferTexture);
 
-	hr = _device->CreateRenderTargetView(pBackBufferTexture, NULL, &_back_buffer);
+	hr = m_device->CreateRenderTargetView(pBackBufferTexture, NULL, &m_back_buffer);
 
 	pBackBufferTexture->Release();
 
@@ -342,7 +227,7 @@ HRESULT Renderer::InitD3D()
 	text2DDesc.Usage = D3D11_USAGE_DEFAULT;
 
 	ID3D11Texture2D* zBufferTexture;
-	hr = _device->CreateTexture2D(&text2DDesc, NULL, &zBufferTexture);
+	hr = m_device->CreateTexture2D(&text2DDesc, NULL, &zBufferTexture);
 	if (FAILED(hr))
 	{
 		OutputDebugString(L"Failed to create Z Buffer Texture.");
@@ -356,13 +241,13 @@ HRESULT Renderer::InitD3D()
 	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
 	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	_device->CreateSamplerState(&samplerDesc, &_skybox_sampler);
+	m_device->CreateSamplerState(&samplerDesc, &m_skybox_sampler);
 
 	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
 	ZeroMemory(&dsvDesc, sizeof(D3D11_DEPTH_STENCIL_VIEW_DESC));
 	dsvDesc.Format = text2DDesc.Format;
 	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-	hr = _device->CreateDepthStencilView(zBufferTexture, &dsvDesc, &_depth_buffer);
+	hr = m_device->CreateDepthStencilView(zBufferTexture, &dsvDesc, &m_depth_buffer);
 	if (FAILED(hr))
 	{
 		OutputDebugString(L"Failed to create depth stencil view.");
@@ -370,7 +255,7 @@ HRESULT Renderer::InitD3D()
 	}
 	zBufferTexture->Release();
 
-	_device_context->OMSetRenderTargets(1, &_back_buffer, _depth_buffer);
+	m_device_context->OMSetRenderTargets(1, &m_back_buffer, m_depth_buffer);
 
 	D3D11_VIEWPORT viewport = {};
 	viewport.TopLeftX = 0;
@@ -379,72 +264,61 @@ HRESULT Renderer::InitD3D()
 	viewport.Height = (UINT)m_window->GetScreenSize()[1];
 	viewport.MinDepth = 0;
 	viewport.MaxDepth = 1;
-	_device_context->RSSetViewports(1, &viewport);
+	m_device_context->RSSetViewports(1, &viewport);
 
-	D3D11_RASTERIZER_DESC rast_none_desc;
-	ZeroMemory(&rast_none_desc, sizeof(D3D11_RASTERIZER_DESC));
-	rast_none_desc.CullMode = D3D11_CULL_NONE;
-	rast_none_desc.FillMode = D3D11_FILL_SOLID;
-	_device->CreateRasterizerState(&rast_none_desc, &_rasterizer_no_culling);
+	// Rasterizer States Creation.
+	D3D11_RASTERIZER_DESC rast_desc;
+	ZeroMemory(&rast_desc, sizeof(D3D11_RASTERIZER_DESC));
+	rast_desc.FillMode = D3D11_FILL_SOLID;
+	rast_desc.CullMode = D3D11_CULL_NONE;
+	m_device->CreateRasterizerState(&rast_desc, &m_rast_states[RAST_NO_CULL]);
+	rast_desc.CullMode = D3D11_CULL_BACK;
+	m_device->CreateRasterizerState(&rast_desc, &m_rast_states[RAST_BACK_CULL]);
+	rast_desc.CullMode = D3D11_CULL_FRONT;
+	m_device->CreateRasterizerState(&rast_desc, &m_rast_states[RAST_FRONT_CULL]);
+	m_device_context->RSSetState(GetRasterizerState(RAST_BACK_CULL));
 
-	D3D11_RASTERIZER_DESC rast_back_desc;
-	ZeroMemory(&rast_back_desc, sizeof(D3D11_RASTERIZER_DESC));
-	rast_back_desc.CullMode = D3D11_CULL_BACK;
-	rast_back_desc.FillMode = D3D11_FILL_SOLID;
-	_device->CreateRasterizerState(&rast_back_desc, &_rasterizer_back_culling);
-
-	D3D11_RASTERIZER_DESC rast_front_desc;
-	ZeroMemory(&rast_front_desc, sizeof(D3D11_RASTERIZER_DESC));
-	rast_front_desc.CullMode = D3D11_CULL_FRONT;
-	rast_front_desc.FillMode = D3D11_FILL_SOLID;
-	_device->CreateRasterizerState(&rast_front_desc, &_rasterizer_front_culling);
-
+	// Depth Stencil States Creation.
 	D3D11_DEPTH_STENCIL_DESC depth_desc = { 0 };
 	depth_desc.DepthEnable = true;
 	depth_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
 	depth_desc.DepthFunc = D3D11_COMPARISON_LESS;
-	_device->CreateDepthStencilState(&depth_desc, &_solid_depth_write);
+	m_device->CreateDepthStencilState(&depth_desc, &m_depth_states[SOLID_DEPTH_STATE]);
 	depth_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-	_device->CreateDepthStencilState(&depth_desc, &_no_depth_write);
+	m_device->CreateDepthStencilState(&depth_desc, &m_depth_states[NONE_DEPTH_STATE]);
 
-	_device_context->RSSetState(_rasterizer_back_culling);
+	// Blend States Creation.
+	D3D11_BLEND_DESC blend_desc = { 0 };
+	blend_desc.RenderTarget[0].BlendEnable = TRUE;
+	blend_desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+	blend_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+	blend_desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+	blend_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	blend_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+	blend_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+	blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	blend_desc.IndependentBlendEnable = FALSE;
+	blend_desc.AlphaToCoverageEnable = TRUE;
+	m_device->CreateBlendState(&blend_desc, &m_blend_states[BLEND_ENABLED]);
+	blend_desc.RenderTarget[0].BlendEnable = FALSE;
+	blend_desc.AlphaToCoverageEnable = FALSE;
+	m_device->CreateBlendState(&blend_desc, &m_blend_states[BLEND_DISABLED]);
 
-	D3D11_BLEND_DESC bd1 = { 0 };
-	bd1.RenderTarget[0].BlendEnable = TRUE;
-	bd1.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-	bd1.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-	bd1.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-	bd1.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-	bd1.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-	bd1.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-	bd1.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-	bd1.IndependentBlendEnable = FALSE;
-	bd1.AlphaToCoverageEnable = TRUE;
-	_device->CreateBlendState(&bd1, &_alpha_blend_enabled);
-
-	D3D11_BLEND_DESC bd2 = { 0 };
-	bd2.RenderTarget[0].BlendEnable = FALSE;
-	bd2.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-	bd2.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-	bd2.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-	bd2.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-	bd2.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-	bd2.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-	bd2.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-	bd2.IndependentBlendEnable = FALSE;
-	bd2.AlphaToCoverageEnable = FALSE;
-	_device->CreateBlendState(&bd2, &_alpha_blend_disabled);
-
-	_skybox = AssetManager::LoadObj(L"Assets/cube.obj");
+	Model* temp = nullptr;
+	HRESULT result = ObjModelLoader::LoadModel("Assets/cube.obj", "", &temp);
+	if (FAILED(result))
+		OutputDebugString(L"Failed to load skybox.");
+	if (temp)
+	{
+		m_skybox = temp->GetModelData();
+	}
 
 	D3D11_BUFFER_DESC bd = { 0 };
-
 	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(Vertex) * _skybox.Vertices.size();
+	bd.ByteWidth = sizeof(Vertex) * m_skybox.vertices.size();
 	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	HRESULT result = _device->CreateBuffer(&bd, NULL, &_skybox_vertex_buffer);
-
+	result = m_device->CreateBuffer(&bd, NULL, &m_skybox_vertex_buffer);
 	if (FAILED(result))
 	{
 		OutputDebugString(L"Failed to create vertex buffer.");
@@ -452,22 +326,22 @@ HRESULT Renderer::InitD3D()
 	}
 
 	D3D11_MAPPED_SUBRESOURCE ms;
-	_device_context->Map(_skybox_vertex_buffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms);
-	memcpy(ms.pData, _skybox.Vertices.data(), sizeof(Vertex) * _skybox.Vertices.size());
-	_device_context->Unmap(_skybox_vertex_buffer, NULL);
+	m_device_context->Map(m_skybox_vertex_buffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms);
+	memcpy(ms.pData, m_skybox.vertices.data(), sizeof(Vertex) * m_skybox.vertices.size());
+	m_device_context->Unmap(m_skybox_vertex_buffer, NULL);
 
-	CreateDDSTextureFromFile(_device, _device_context, L"Assets/skybox01.dds", NULL, &_skybox_texture);
+	CreateDDSTextureFromFile(m_device, m_device_context, L"Assets/skybox01.dds", NULL, &m_skybox_texture);
 
 	return S_OK;
 }
 
 HRESULT Renderer::InitPipeline()
 {
-	LoadVertexShader(L"VertexShader.cso", &_default_vertex_shader, &_default_layout);
-	LoadPixelShader(L"PixelShader.cso", &_default_pixel_shader);
+	LoadVertexShader(L"VertexShader.cso", &m_vertex_shaders[DEFAULT_VERTEX_SHADER], &m_layouts[DEFAULT_INPUT_LAYOUT]);
+	LoadPixelShader(L"PixelShader.cso", &m_pixel_shaders[DEFAULT_PIXEL_SHADER]);
 
-	LoadVertexShader(L"SkyboxVertexShader.cso", &_skybox_vertex_shader, &_skybox_layout);
-	LoadPixelShader(L"SkyboxPixelShader.cso", &_skybox_pixel_shader);
+	LoadVertexShader(L"SkyboxVertexShader.cso", &m_vertex_shaders[SKYBOX_VERTEX_SHADER], &m_layouts[SKYBOX_INPUT_LAYOUT]);
+	LoadPixelShader(L"SkyboxPixelShader.cso", &m_pixel_shaders[SKYBOX_PIXEL_SHADER]);
 
 	return S_OK;
 }
@@ -477,66 +351,56 @@ void Renderer::CleanD3D()
 	if (_fps_counter)
 		delete _fps_counter;
 
-	if (_default_vertex_shader)
-		_default_vertex_shader->Release();
-	if (_default_pixel_shader)
-		_default_pixel_shader->Release();
+	for (int i = 0; i < VERTEX_SHADER_COUNT; ++i)
+		if (m_vertex_shaders[i])
+			m_vertex_shaders[i]->Release();
+	for (int i = 0; i < PIXEL_SHADER_COUNT; ++i)
+		if (m_pixel_shaders[i])
+			m_pixel_shaders[i]->Release();
+	for (int i = 0; i < BUFFER_COUNT; ++i)
+		if (m_buffers[i])
+			m_buffers[i]->Release();
+	for (int i = 0; i < RAST_STATE_COUNT; ++i)
+		if (m_rast_states[i])
+			m_rast_states[i]->Release();
+	for (int i = 0; i < BLEND_STATE_COUNT; ++i)
+		if (m_blend_states[i])
+			m_blend_states[i]->Release();
+	for (int i = 0; i < INPUT_LAYOUT_COUNT; ++i)
+		if (m_layouts[i])
+			m_layouts[i]->Release();
+	for (int i = 0; i < DEPTH_STATE_COUNT; ++i)
+		if (m_depth_states[i])
+			m_depth_states[i]->Release();
 
-	if (_skybox_vertex_shader)
-		_skybox_vertex_shader->Release();
-	if (_skybox_pixel_shader)
-		_skybox_pixel_shader->Release();
-
-
-	if (_const_buffer)
-		_const_buffer->Release();
-	if (_pixel_const_buffer)
-		_pixel_const_buffer->Release();
-	if (_skybox_const_buffer)
-		_skybox_const_buffer->Release();
+	if (m_skybox_sampler)
+		m_skybox_sampler->Release();
+	if (m_skybox_texture)
+		m_skybox_texture->Release();
+	if (m_skybox_vertex_buffer)
+		m_skybox_vertex_buffer->Release();
 	
-	if (_skybox_vertex_buffer)
-		_skybox_vertex_buffer->Release();
+	if (m_depth_buffer)
+		m_depth_buffer->Release();
+	if (m_back_buffer)
+		m_back_buffer->Release();
 
-	if (_skybox_sampler)
-		_skybox_sampler->Release();
-	if (_skybox_texture)
-		_skybox_texture->Release();
+	if (m_swapchain)
+		m_swapchain->Release();
 
-	if (_default_layout)
-		_default_layout->Release();
-	if (_skybox_layout)
-		_skybox_layout->Release();
+	if (m_device)
+		m_device->Release();
+	if (m_device_context)
+		m_device_context->Release();
+}
 
-	if (_rasterizer_no_culling)
-		_rasterizer_no_culling->Release();
-	if (_rasterizer_back_culling)
-		_rasterizer_back_culling->Release();
-	if (_rasterizer_front_culling)
-		_rasterizer_front_culling->Release();
-
-	if (_solid_depth_write)
-		_solid_depth_write->Release();
-	if (_no_depth_write)
-		_no_depth_write->Release();
-
-	if (_alpha_blend_enabled)
-		_alpha_blend_enabled->Release();
-	if (_alpha_blend_disabled)
-		_alpha_blend_disabled->Release();
-
-	if (_depth_buffer)
-		_depth_buffer->Release();
-	if (_back_buffer)
-		_back_buffer->Release();
-
-	if (_swapchain)
-		_swapchain->Release();
-
-	if (_device)
-		_device->Release();
-	if (_device_context)
-		_device_context->Release();
+void Renderer::SwitchCamera()
+{
+	_current_cam++;
+	if (_current_cam >= _cameras.size())
+		_current_cam = 0;
+	if (_cameras[_current_cam])
+		_camera = _cameras[_current_cam];
 }
 
 HRESULT Renderer::LoadVertexShader(LPCWSTR filename, ID3D11VertexShader** vs, ID3D11InputLayout** il)
@@ -544,7 +408,7 @@ HRESULT Renderer::LoadVertexShader(LPCWSTR filename, ID3D11VertexShader** vs, ID
 	HRESULT result;
 	auto vertexShaderBytecode = DX::ReadData(filename);
 
-	result = _device->CreateVertexShader(vertexShaderBytecode.data(), vertexShaderBytecode.size(), NULL, vs);
+	result = m_device->CreateVertexShader(vertexShaderBytecode.data(), vertexShaderBytecode.size(), NULL, vs);
 	if (FAILED(result))
 	{
 		return result;
@@ -588,7 +452,7 @@ HRESULT Renderer::LoadVertexShader(LPCWSTR filename, ID3D11VertexShader** vs, ID
 		ied[i].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 		ied[i].InstanceDataStepRate = 0;
 	}
-	result = _device->CreateInputLayout(ied, desc.InputParameters, vertexShaderBytecode.data(), vertexShaderBytecode.size(), il);
+	result = m_device->CreateInputLayout(ied, desc.InputParameters, vertexShaderBytecode.data(), vertexShaderBytecode.size(), il);
 	if (FAILED(result))
 	{
 		OutputDebugString(L"Failed to create input layout...");
@@ -605,20 +469,10 @@ HRESULT Renderer::LoadPixelShader(LPCWSTR filename, ID3D11PixelShader** ps)
 	HRESULT result;
 	auto pixelShaderBytecode = DX::ReadData(filename);
 
-	result = _device->CreatePixelShader(pixelShaderBytecode.data(), pixelShaderBytecode.size(), NULL, ps);
+	result = m_device->CreatePixelShader(pixelShaderBytecode.data(), pixelShaderBytecode.size(), NULL, ps);
 	if (FAILED(result))
 	{
 		return result;
 	}
 	return S_OK;
-}
-
-void Renderer::SwitchCamera()
-{
-	_current_cam++;
-	if (_current_cam >= _cameras.size())
-		_current_cam = 0;
-	if (_cameras[_current_cam])
-		_camera = _cameras[_current_cam];
-	Input::SetMouseMode(!_camera->IsFree() ? Mouse::MODE_ABSOLUTE : Mouse::MODE_RELATIVE);
 }

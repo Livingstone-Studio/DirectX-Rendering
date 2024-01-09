@@ -1,17 +1,32 @@
 #include "GameObject.h"
 
-GameObject::GameObject(Transform t)
-	:IVisualObject()
+#include "../Rendering/OBJ/ObjModelLoader.h"
+
+GameObject::GameObject(Transform transform)
 {
-	_transform = t;
+	m_transform = transform;
 }
 
-GameObject::GameObject(const wchar_t* meshPath, const wchar_t* texturePath, bool transpa, Transform t)
-	: IVisualObject(meshPath, texturePath, transpa)
+GameObject::GameObject(std::string meshPath, std::string texturePath, Transform transform)
 {
-	_transform = t;
+	m_transform = transform;
+	if (meshPath.size() > 0)
+		ObjModelLoader::LoadModel(meshPath, texturePath, &m_model);
+	if (m_model)
+		m_model->SetOwner(this);
 }
 
 GameObject::~GameObject()
 {
+}
+
+XMMATRIX GameObject::GetViewMatrix()
+{
+	XMVECTOR eyePos = { m_transform.pos.x, m_transform.pos.y, m_transform.pos.z };
+	XMVECTOR camUp = { 0,1,0 };
+	XMVECTOR lookAt = { sin(m_transform.rot.y) * sin(m_transform.rot.x),
+						cos(m_transform.rot.x),
+						cos(m_transform.rot.y) * sin(m_transform.rot.x) };
+	XMMATRIX view = XMMatrixLookToLH(eyePos, lookAt, camUp);
+	return view;
 }

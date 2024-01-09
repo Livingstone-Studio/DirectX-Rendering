@@ -1,57 +1,29 @@
 #pragma once
 
-#include "IVisualObject.h"
+#include "../Rendering/OBJ/Model.h"
+#include "../GlobalDefinitions.h"
 
-struct Transform
+// GameObjects are not the primary focus of this project, hence why its a relatively simple system.
+class GameObject
 {
-	XMFLOAT3 pos{ 0,0,0 };
-	XMFLOAT3 rot{ 0,0,0 };
-	XMFLOAT3 sca{ 1,1,1 };
-
-	Transform() : pos{ 0,0,0 }, rot{ 0,0,0 }, sca{ 1,1,1 } {};
-	Transform(XMFLOAT3 p, XMFLOAT3 r, XMFLOAT3 s) : pos{ p }, rot{ r }, sca{ s } {};
-
-	XMFLOAT3 GetForward()
-	{
-		XMFLOAT3 forward = { (float)sin(rot.y) * (float)sin(rot.x),
-			(float)cos(rot.x),
-			(float)cos(rot.y) * (float)sin(rot.x) };
-		return forward;
-	}
-
-	XMFLOAT3 GetBackward()
-	{
-		XMFLOAT3 forward = { (float)sin(rot.y) * (float)sin(rot.x) * -1,
-			(float)cos(rot.x) * -1,
-			(float)cos(rot.y) * (float)sin(rot.x) * -1 };
-		return forward;
-	}
-
-	XMMATRIX GetWorldMatrix()
-	{
-		XMMATRIX translation = XMMatrixTranslation(pos.x, pos.y, pos.z);
-		XMMATRIX rotation = XMMatrixRotationRollPitchYaw(rot.x, rot.y, rot.z);
-		XMMATRIX scale = XMMatrixScaling(sca.x, sca.y, sca.z);
-		XMMATRIX world = scale * rotation * translation;
-		return world;
-	}
-};
-
-class GameObject : public IVisualObject
-{
-public :
-	GameObject(Transform t);
-	GameObject(const wchar_t* meshPath, const wchar_t* texturePath, bool transpa, Transform t);
+public:
+	GameObject(Transform transform);
+	GameObject(std::string meshPath, std::string texturePath, Transform transform);
 	~GameObject();
 
-	Transform GetTransform() {	return _transform;	};
-	void SetTransform(Transform t) { _transform = t; }
-	void SetPosition(XMFLOAT3 p) { _transform.pos = p; }
-	void Rotate(XMFLOAT3 r) { _transform.rot = XMFLOAT3(_transform.rot.x + r.x,
-														_transform.rot.y + r.y, 
-														_transform.rot.z + r.z ); }
+public:
+	// Transform
+	void SetTransform(Transform t) { m_transform = t; }
+	Transform GetTransform() {	return m_transform;	};
+	// Model
+	Model* GetModel() { return m_model; }
 
+	XMMATRIX GetViewMatrix();
+
+	virtual void Update() = 0;
 
 protected:
-	Transform _transform;
+	Transform m_transform;
+	Model* m_model;
+
 };

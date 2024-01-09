@@ -6,20 +6,24 @@
 
 Keyboard Input::keyboard;
 Keyboard::KeyboardStateTracker Input::kbStateTracker;
+Keyboard::State Input::kbState;
 
 Mouse Input::mouse;
 Mouse::ButtonStateTracker Input::msTracker;
+Mouse::State Input::msState;
 
 void Input::Initialize()
 {
 	Mouse::Get().SetWindow(GameWindow::Instance->GetWindowHandle());
-	Mouse::Get().SetMode(Mouse::MODE_ABSOLUTE);
+	Mouse::Get().SetMode(Mouse::MODE_RELATIVE);
 }
 
 void Input::HandleInputs()
 {
-	auto kbState = Keyboard::Get().GetState();
+	kbState = Keyboard::Get().GetState();
 	kbStateTracker.Update(kbState);
+	msState = Mouse::Get().GetState();
+	msTracker.Update(msState);
 
 	if (kbStateTracker.pressed.Escape)
 	{
@@ -28,6 +32,23 @@ void Input::HandleInputs()
 
 	Camera* camera = Renderer::Instance->GetCamera();
 	if (!camera)
+		return;
+
+	if (msTracker.leftButton == Mouse::ButtonStateTracker::PRESSED)
+	{
+		Renderer::Instance->SwitchCamera();
+	}
+
+	if (kbStateTracker.pressed.F10)
+	{
+		Mouse::Mode mode = Mouse::Get().GetState().positionMode;
+		if (mode == Mouse::MODE_RELATIVE)
+			Mouse::Get().SetMode(Mouse::MODE_ABSOLUTE);
+		else 
+			Mouse::Get().SetMode(Mouse::MODE_RELATIVE);
+	}
+
+	if (!camera->IsFree())
 		return;
 
 	XMINT3 camDir = { 0,0,0 };
@@ -48,16 +69,10 @@ void Input::HandleInputs()
 
 	camera->MovePosition(camDir);
 
-	auto mState = Mouse::Get().GetState();
-	msTracker.Update(mState);
 
 	float sens = XM_2PI * 0.00025f;
-	camera->Rotate(XMFLOAT3(mState.y * sens, mState.x * sens, 0));
+	camera->Rotate(XMFLOAT3(msState.y * sens, msState.x * sens, 0));
 
-	if (msTracker.leftButton == Mouse::ButtonStateTracker::PRESSED)
-	{
-		Renderer::Instance->SwitchCamera();
-	}
 }
 
 LRESULT Input::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)

@@ -19,9 +19,8 @@ public:
 	HWND GetWindowHandle() { return m_window_handle; }
 
 private:
-	const wchar_t* m_window_name = L"Despacitios Free";
+	const wchar_t* m_window_name = L"Tussle in Tumbleweed Town";
 	float m_screen_size[2] = {800, 600};
 	HWND m_window_handle = NULL;
 
 };
-
