@@ -1,8 +1,10 @@
 #pragma once
 
 #include <DirectXMath.h>
+#include <SimpleMath.h>
 
 using namespace DirectX;
+using namespace SimpleMath;
 
 const unsigned int MAX_LIGHTS = 12;
 const unsigned int DIRECTIONAL_LIGHT = 1;
@@ -48,9 +50,9 @@ const unsigned int SKYBOX_PIXEL_SHADER = 1;
 
 struct Transform
 {
-	XMFLOAT3 pos{ 0,0,0 };
-	XMFLOAT3 rot{ 0,0,0 };
-	XMFLOAT3 sca{ 1,1,1 };
+	Vector3 pos{ 0,0,0 };
+	Vector3 rot{ 0,0,0 };
+	Vector3 sca{ 1,1,1 };
 
 	Transform() : pos{ 0,0,0 }, rot{ 0,0,0 }, sca{ 1,1,1 } {};
 	Transform(XMFLOAT3 p, XMFLOAT3 r, XMFLOAT3 s) : pos{ p }, rot{ r }, sca{ s } {};

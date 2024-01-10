@@ -143,8 +143,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\GameObjects\Bullet.cpp" />
     <ClCompile Include="Source\Core\AudioSystem.cpp" />
-    <ClCompile Include="Source\Core\Collisions\Collider.cpp" />
+    <ClCompile Include="Source\GameObjects\Collider.cpp" />
     <ClCompile Include="Source\Core\Collisions\CollisionSystem.cpp" />
     <ClCompile Include="Source\GameObjects\Enemy.cpp" />
     <ClCompile Include="Source\GameObjects\Player.cpp" />
@@ -164,8 +165,9 @@
     <ClCompile Include="Source\GameObjects\TextObject.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\GameObjects\Bullet.h" />
     <ClInclude Include="Source\Core\AudioSystem.h" />
-    <ClInclude Include="Source\Core\Collisions\Collider.h" />
+    <ClInclude Include="Source\GameObjects\Collider.h" />
     <ClInclude Include="Source\Core\Collisions\CollisionSystem.h" />
     <ClInclude Include="Source\GameObjects\Enemy.h" />
     <ClInclude Include="Source\GameObjects\Player.h" />

@@ -3,6 +3,8 @@
 #include "GameObject.h"
 #include "../Rendering/RendererDefinitions.h"
 
+using namespace DirectX;
+
 class Character : public GameObject
 {
 public:
@@ -19,5 +21,9 @@ public:
 protected:
 	float m_speed = 5.0f;
 	int m_light_indexs[2] = { -1,-1 };
+
+	int m_x_bounds[2] = { -3,3 };
+	int m_z_bounds[2] = { -45,5 };
+
 };
 

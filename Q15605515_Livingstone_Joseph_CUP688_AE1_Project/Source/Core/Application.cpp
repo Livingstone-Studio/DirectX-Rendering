@@ -8,6 +8,8 @@
 #include "../GameObjects/Prop.h"
 #include "../GameObjects/TextObject.h"
 
+Application* Application::Instance = nullptr;
+
 int Application::Execute(HINSTANCE instanceHandle, int nCmdShow)
 {
     Initialize(instanceHandle, nCmdShow);
@@ -20,11 +22,14 @@ void Application::Initialize(HINSTANCE instanceHandle, int nCmdShow)
 {
     m_instance_handle = instanceHandle;
 
+    Instance = this;
+
     OpenConsole();
 
     m_window = new GameWindow(instanceHandle, nCmdShow);
     m_renderer = new Renderer(m_window);
     m_audio = new AudioSystem();
+    m_collision = new CollisionSystem();
 
     m_fps_counter = new TextObject(L"Hey", {0.05f, 0.05f}, 15.0f);
 
@@ -38,10 +43,10 @@ void Application::Initialize(HINSTANCE instanceHandle, int nCmdShow)
             { { 0.0f, 0.1f, 0.0f }, {XM_PIDIV2, 0.0f, 0.0f},
             { 2.0f, 2.0f, 2.0f } }));
 
-    //m_game_objects.push_back(
-    //    new Enemy("Assets/aggressivetumbleweed.obj",
-    //        { { 0.0f, 0.1f, 0.0f }, {XM_PIDIV2, 0.0f, 0.0f},
-    //        { 2.0f, 2.0f, 2.0f } }, m_game_objects[m_game_objects.size()-1]));
+    m_game_objects.push_back(
+        new Enemy("Assets/aggressivetumbleweed.obj",
+            { { 0.0f, 0.1f, 0.0f }, {XM_PIDIV2, 0.0f, 0.0f},
+            { 2.0f, 2.0f, 2.0f } }, m_game_objects[m_game_objects.size()-1]));
 
     Input::Initialize();
 
@@ -68,10 +73,11 @@ void Application::AppLoop()
             Time::Update();
             m_window->Update();
 
-            Start();
+            FrameStart();
             Input();
             Update();
             Render();
+            FrameEnd();
         }
 
 
@@ -94,6 +100,8 @@ void Application::Cleanup()
 
     ObjModelLoader::Cleanup();
 
+    if (m_collision)
+        delete m_collision;
     if (m_audio)
         delete m_audio;
     if (m_window)
@@ -102,8 +110,11 @@ void Application::Cleanup()
         delete m_renderer;
 }
 
-void Application::Start()
+void Application::FrameStart()
 {
+    for (GameObject* game_object : m_frame_spawns)
+        if (game_object) m_game_objects.push_back(game_object);
+    m_frame_spawns.clear();
 }
 
 void Application::Input()
@@ -113,6 +124,9 @@ void Application::Input()
 
 void Application::Update()
 {
+    if (m_collision)
+        m_collision->CheckCollisions();
+
     if (m_audio)
         m_audio->Update();
     m_fps_counter->SetText(L"FPS: " + to_wstring(Time::GetFPS()));
@@ -128,6 +142,30 @@ void Application::Render()
         m_renderer->Draw(m_game_objects);
 }
 
+void Application::FrameEnd()
+{
+    std::vector<GameObject*> marked;
+    for (GameObject* game_object : m_game_objects)
+    {
+        if (!game_object)
+            continue;
+        if (!game_object->IsMarkedForDestroy())
+            continue;
+        marked.push_back(game_object);
+    }
+
+    Collider* collider;
+    for (GameObject* game_object : marked)
+    {
+        m_game_objects.erase(std::remove(m_game_objects.begin(), m_game_objects.end(), game_object), m_game_objects.end());
+                
+        delete game_object;
+    }
+
+    //if (m_collision)
+    //    m_collision->FrameCleanup();
+}
+
 void Application::OpenConsole()
 {
     if (AllocConsole())
@@ -138,6 +176,6 @@ void Application::OpenConsole()
         freopen_s(&fp, "CONOUT$", "w", stderr);
         std::ios::sync_with_stdio(true);
 
-        std::cout << "Hello Debug Console!" << std::endl;
+        std::cout << "Debug Console initalized." << std::endl;
     }
 }

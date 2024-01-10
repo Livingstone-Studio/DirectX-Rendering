@@ -46,13 +46,6 @@ void Character::Move(XMFLOAT3 direction)
 {
 	XMVECTOR normalized = XMVector3Normalize(XMLoadFloat3(&direction));
 	XMStoreFloat3(&direction, normalized);
-
-	//m_transform.pos = {
-	//m_transform.pos.x + (m_speed * direction.x * (float)Time::GetDeltaTime()),
-	//m_transform.pos.y,
-	//m_transform.pos.z + (m_speed * direction.z * (float)Time::GetDeltaTime())
-	//};
-
 	
 	m_transform.pos = {
 			(float)(m_transform.pos.x + (m_speed * direction.z * (float)Time::GetDeltaTime()) * sin(m_transform.rot.y) * sin(m_transform.rot.x)),
@@ -65,6 +58,15 @@ void Character::Move(XMFLOAT3 direction)
 	m_transform.pos.y,
 	(float)(m_transform.pos.z + (m_speed * direction.x * (float)Time::GetDeltaTime()) * (-sin(m_transform.rot.y)))
 	};
+
+	if (m_transform.pos.x > m_x_bounds[1])
+		m_transform.pos.x = m_x_bounds[1];
+	else if (m_transform.pos.x < m_x_bounds[0])
+		m_transform.pos.x = m_x_bounds[0];
+	if (m_transform.pos.z > m_z_bounds[1])
+		m_transform.pos.z = m_z_bounds[1];
+	else if (m_transform.pos.z < m_z_bounds[0])
+		m_transform.pos.z = m_z_bounds[0];
 }
 
 void Character::Rotate(XMFLOAT3 direction)

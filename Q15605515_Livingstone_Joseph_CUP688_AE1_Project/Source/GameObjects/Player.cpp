@@ -4,6 +4,9 @@
 #include "../Core/Input.h"
 #include "../Rendering/Renderer.h"
 #include "../Core/AudioSystem.h"
+#include "../Core/Application.h"
+#include "../Core/Collisions/CollisionSystem.h"
+#include "Bullet.h"
 
 Player::Player(std::string meshPath, Transform transform)
 	:Character(meshPath, transform,
@@ -24,12 +27,19 @@ Player::Player(std::string meshPath, Transform transform)
 			{ 0.0f, 0.0f, 0.0f, 1.0f },
 			{ 0.0f, 0.0f, 0.0f, 1.0f },
 			Colors::NavajoWhite
-		}), TextObject(L"6/6", { 0.05f, 0.85f }, 15.0f)
+		}),
+	TextObject(L"6/6", { 0.05f, 0.85f }, 15.0f)
 {
+	m_collider = new Collider(this ,std::bind(&Player::OnCollisionHit, this, std::placeholders::_1));
 }
 
 Player::~Player()
 {
+	if (m_collider)
+	{
+		CollisionSystem::Instance->RemoveCollider(m_collider);
+		delete m_collider;
+	}
 }
 
 void Player::Update()
@@ -54,6 +64,21 @@ void Player::Update()
 
 
 	camera->SetPosition({ m_transform.pos.x, camera->GetPosition().y, m_transform.pos.z });
+}
+
+void Player::Shoot()
+{
+	if (AudioSystem::Instance)
+		AudioSystem::Instance->PlaySoundEffect(L"Assets/Shooting.wav");
+	if (Application::Instance)
+		Application::Instance->InstantiateObject(new Bullet("Assets/cube.obj",
+			{ m_transform.pos + m_transform.GetForward(),
+			{0, 0, 0},
+			{ 0.2f,0.2f, 0.2f } }, m_transform.GetForward()));
+}
+
+void Player::OnCollisionHit(Collider* collider)
+{
 }
 
 void Player::HandleMovementInput(Keyboard::KeyboardStateTracker kbState)
@@ -84,8 +109,7 @@ void Player::HandleShootingInput(Mouse::ButtonStateTracker msState)
 	else if (msState.leftButton == Mouse::ButtonStateTracker::PRESSED)
 	{		
 		m_shoot_timer = m_max_shoot_timer;
-		if (AudioSystem::Instance)
-			AudioSystem::Instance->PlaySoundEffect(L"Assets/Shooting.wav");
+		Shoot();
 	}
 	else if (GetText() != L"")
 	{

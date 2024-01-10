@@ -22,8 +22,11 @@ public:
 
 	virtual void Update() = 0;
 
+	void Destroy() { m_marked_for_destroy = true; }
+	const bool& IsMarkedForDestroy() { return m_marked_for_destroy; }
+
 protected:
 	Transform m_transform;
 	Model* m_model;
-
+	bool m_marked_for_destroy = false;
 };

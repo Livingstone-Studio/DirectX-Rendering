@@ -95,7 +95,7 @@ Renderer::~Renderer()
 
 void Renderer::Draw(std::vector<GameObject*> gameObjects)
 {
-	m_device_context->ClearRenderTargetView(m_back_buffer, Colors::RosyBrown);
+	m_device_context->ClearRenderTargetView(m_back_buffer, Colors::Black);
 
 	if (!_camera)
 		return;

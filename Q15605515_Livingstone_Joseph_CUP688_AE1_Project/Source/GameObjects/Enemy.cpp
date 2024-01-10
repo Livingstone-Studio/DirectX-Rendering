@@ -2,6 +2,8 @@
 
 #include "../Rendering/Renderer.h"
 #include "../Core/Time.h"
+#include "Player.h"
+#include "../Core/Collisions/CollisionSystem.h"
 
 Enemy::Enemy(std::string meshPath, Transform transform, GameObject* target)
 	:Character(meshPath, transform,
@@ -16,11 +18,17 @@ Enemy::Enemy(std::string meshPath, Transform transform, GameObject* target)
 		})
 {
 	m_target = target;
-	m_speed = 2.0f;
+	m_speed = 0.1f;
+	m_collider = new Collider(this, std::bind(&Enemy::OnCollisionHit, this, std::placeholders::_1));
 }
 
 Enemy::~Enemy()
 {
+	if (m_collider)
+	{
+		CollisionSystem::Instance->RemoveCollider(m_collider);
+		delete m_collider;
+	}
 }
 
 void Enemy::Update()
@@ -63,4 +71,13 @@ void Enemy::Move(XMFLOAT3 direction)
 	m_transform.pos.y,
 	m_transform.pos.z + (m_speed * direction.z * (float)Time::GetDeltaTime())
 	};
+}
+
+void Enemy::OnCollisionHit(Collider* collider)
+{
+	if (collider->GetOwner() == m_target)
+	{
+		// You lose!
+		std::cout << "Hit Player!" << std::endl;
+	}
 }
