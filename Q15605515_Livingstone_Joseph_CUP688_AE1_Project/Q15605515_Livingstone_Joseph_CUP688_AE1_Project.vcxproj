@@ -143,14 +143,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Core\AudioSystem.cpp" />
     <ClCompile Include="Source\Core\Collisions\Collider.cpp" />
     <ClCompile Include="Source\Core\Collisions\CollisionSystem.cpp" />
     <ClCompile Include="Source\GameObjects\Enemy.cpp" />
     <ClCompile Include="Source\GameObjects\Player.cpp" />
     <ClCompile Include="Source\GameObjects\Character.cpp" />
     <ClCompile Include="Source\GameObjects\Prop.cpp" />
-    <ClCompile Include="Source\Rendering\OBJ\Model.cpp" />
-    <ClCompile Include="Source\Rendering\OBJ\ObjModelLoader.cpp" />
+    <ClCompile Include="Source\Rendering\Custom OBJ Loader\Model.cpp" />
+    <ClCompile Include="Source\Rendering\Custom OBJ Loader\ObjModelLoader.cpp" />
     <ClCompile Include="Source\GameObjects\Camera.cpp" />
     <ClCompile Include="Source\GameObjects\GameObject.cpp" />
     <ClCompile Include="Source\Core\Input.cpp" />
@@ -160,8 +161,10 @@
     <ClCompile Include="Source\Rendering\External\text2D.cpp" />
     <ClCompile Include="Source\Core\Time.cpp" />
     <ClCompile Include="Source\Rendering\GameWindow.cpp" />
+    <ClCompile Include="Source\GameObjects\TextObject.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Core\AudioSystem.h" />
     <ClInclude Include="Source\Core\Collisions\Collider.h" />
     <ClInclude Include="Source\Core\Collisions\CollisionSystem.h" />
     <ClInclude Include="Source\GameObjects\Enemy.h" />
@@ -169,9 +172,9 @@
     <ClInclude Include="Source\GameObjects\Character.h" />
     <ClInclude Include="Source\GameObjects\Prop.h" />
     <ClInclude Include="Source\GlobalDefinitions.h" />
-    <ClInclude Include="Source\Rendering\OBJ\Model.h" />
-    <ClInclude Include="Source\Rendering\OBJ\ModelDataStructs.h" />
-    <ClInclude Include="Source\Rendering\OBJ\ObjModelLoader.h" />
+    <ClInclude Include="Source\Rendering\Custom OBJ Loader\Model.h" />
+    <ClInclude Include="Source\Rendering\Custom OBJ Loader\ModelDataStructs.h" />
+    <ClInclude Include="Source\Rendering\Custom OBJ Loader\ObjModelLoader.h" />
     <ClInclude Include="Source\GameObjects\Camera.h" />
     <ClInclude Include="Source\GameObjects\GameObject.h" />
     <ClInclude Include="Source\Core\Input.h" />
@@ -182,6 +185,7 @@
     <ClInclude Include="Source\Core\Time.h" />
     <ClInclude Include="Source\Rendering\GameWindow.h" />
     <ClInclude Include="Source\Rendering\RendererDefinitions.h" />
+    <ClInclude Include="Source\GameObjects\TextObject.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Source\Rendering\Shaders\SkyboxPixelShader.hlsl">
@@ -243,6 +247,9 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Assets\wildwest.spritefont">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

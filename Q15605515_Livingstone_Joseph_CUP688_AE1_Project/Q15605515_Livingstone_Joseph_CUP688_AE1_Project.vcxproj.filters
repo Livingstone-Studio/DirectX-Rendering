@@ -42,10 +42,10 @@
     <ClCompile Include="Source\Rendering\GameWindow.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Rendering\OBJ\ObjModelLoader.cpp">
+    <ClCompile Include="Source\Rendering\Custom OBJ Loader\ObjModelLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Rendering\OBJ\Model.cpp">
+    <ClCompile Include="Source\Rendering\Custom OBJ Loader\Model.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\GameObjects\Prop.cpp">
@@ -64,6 +64,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Core\Collisions\Collider.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\GameObjects\TextObject.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\AudioSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -95,13 +101,13 @@
     <ClInclude Include="Source\Rendering\GameWindow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Rendering\OBJ\ObjModelLoader.h">
+    <ClInclude Include="Source\Rendering\Custom OBJ Loader\ObjModelLoader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Rendering\OBJ\Model.h">
+    <ClInclude Include="Source\Rendering\Custom OBJ Loader\Model.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Rendering\OBJ\ModelDataStructs.h">
+    <ClInclude Include="Source\Rendering\Custom OBJ Loader\ModelDataStructs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\GlobalDefinitions.h">
@@ -128,6 +134,12 @@
     <ClInclude Include="Source\Core\Collisions\Collider.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\GameObjects\TextObject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\AudioSystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Source\Rendering\Shaders\text2D_shaders.hlsl" />
@@ -138,5 +150,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="Assets\wildwest.spritefont" />
   </ItemGroup>
 </Project>

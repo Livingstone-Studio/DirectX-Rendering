@@ -1,6 +1,6 @@
 #include "GameObject.h"
 
-#include "../Rendering/OBJ/ObjModelLoader.h"
+#include "../Rendering/Custom OBJ Loader/ObjModelLoader.h"
 
 GameObject::GameObject(Transform transform)
 {

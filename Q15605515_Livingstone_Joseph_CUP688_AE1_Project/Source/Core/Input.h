@@ -14,8 +14,8 @@ public:
 
 	static void SetMouseMode(DirectX::Mouse::Mode mode) { Mouse::Get().SetMode(mode); }
 
-	static const Keyboard::State& GetKeyboardState() { return kbState; }
-	static const Mouse::State& GetMouseState() { return msState; }
+	static const Keyboard::KeyboardStateTracker& GetKeyboardStateTracker() { return kbStateTracker; }
+	static const Mouse::ButtonStateTracker& GetMouseStateTracker() { return msTracker; }
 
 private:
 	static Keyboard keyboard;

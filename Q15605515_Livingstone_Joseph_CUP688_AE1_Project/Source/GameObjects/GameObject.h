@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Rendering/OBJ/Model.h"
+#include "../Rendering/Custom OBJ Loader/Model.h"
 #include "../GlobalDefinitions.h"
 
 // GameObjects are not the primary focus of this project, hence why its a relatively simple system.

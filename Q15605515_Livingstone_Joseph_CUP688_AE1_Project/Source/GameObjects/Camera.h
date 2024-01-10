@@ -12,19 +12,21 @@ public:
     Camera(bool free);
     ~Camera();
 
+public:
 	void Update() override {}
-
-	void SetPosition(XMFLOAT3 position) { m_transform.pos = position; }
 	void MovePosition(XMINT3 dir);
 	void Rotate(XMFLOAT3 dir);
 
+public:
+	void SetPosition(XMFLOAT3 position) { m_transform.pos = position; }
 	XMFLOAT3 GetPosition() { return m_transform.pos; }
 	float GetPitch() { return m_transform.rot.x; }
 	float GetYaw() { return m_transform.rot.y; }
-	bool IsFree() { return _free_cam; }
+
+	bool IsFree() { return m_free_cam; }
 
 private:
-	float _speed = 0.25f;
-	bool _free_cam = false;
+	float m_speed = 0.25f;
+	bool m_free_cam = false;
 };
 

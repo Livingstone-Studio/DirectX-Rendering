@@ -3,10 +3,11 @@
 #include "../Core/Time.h"
 #include "../Core/Input.h"
 #include "../Rendering/Renderer.h"
+#include "../Core/AudioSystem.h"
 
 Player::Player(std::string meshPath, Transform transform)
-	:Character(meshPath, transform, 
-		Light{ 
+	:Character(meshPath, transform,
+		Light{
 			SPOT_LIGHT,
 			true,
 			30,
@@ -14,7 +15,7 @@ Player::Player(std::string meshPath, Transform transform)
 			{ 0.0f, 0.0f, 0.0f, 1.0f },
 			{ 1.0f, 0.0f, 0.0f, 1.0f },
 			Colors::NavajoWhite
-			 },
+		},
 		Light{
 			POINT_LIGHT,
 			true,
@@ -23,7 +24,7 @@ Player::Player(std::string meshPath, Transform transform)
 			{ 0.0f, 0.0f, 0.0f, 1.0f },
 			{ 0.0f, 0.0f, 0.0f, 1.0f },
 			Colors::NavajoWhite
-		})
+		}), TextObject(L"6/6", { 0.05f, 0.85f }, 15.0f)
 {
 }
 
@@ -46,41 +47,48 @@ void Player::Update()
 	else if (camera->IsFree())
 		return;
 
-	Keyboard::State kState = Input::GetKeyboardState();
+	Keyboard::KeyboardStateTracker kState = Input::GetKeyboardStateTracker();
 	HandleMovementInput(kState);
-	Mouse::State mState = Input::GetMouseState();
+	Mouse::ButtonStateTracker mState = Input::GetMouseStateTracker();
 	HandleShootingInput(mState);
 
 
 	camera->SetPosition({ m_transform.pos.x, camera->GetPosition().y, m_transform.pos.z });
 }
 
-void Player::HandleMovementInput(Keyboard::State kbState)
+void Player::HandleMovementInput(Keyboard::KeyboardStateTracker kbState)
 {
 	XMFLOAT3 direction = { 0,0,0 };
-	if (kbState.W)
+	if (kbState.lastState.W)
 		direction.z += 1;
-	if (kbState.S)
+	if (kbState.lastState.S)
 		direction.z -= 1;
-	if (kbState.D)
+	if (kbState.lastState.D)
 		direction.x += 1;
-	if (kbState.A)
+	if (kbState.lastState.A)
 		direction.x -= 1;
 	Move(direction);
 }
 
-void Player::HandleShootingInput(Mouse::State msState)
+void Player::HandleShootingInput(Mouse::ButtonStateTracker msState)
 {
+	Mouse::State last_state = msState.GetLastState();
 	float sens = XM_2PI * 0.00025f;
-	Rotate(XMFLOAT3(0, msState.x * sens, 0));
+	Rotate(XMFLOAT3(0, last_state.x * sens, 0));
 
-
-	if (msState.leftButton)
+	if (m_shoot_timer > 0.0)
 	{
-		m_shoot_timer += Time::GetDeltaTime();
-		if (m_shoot_timer < m_max_shoot_timer)
-			return;
-		m_shoot_timer = 0.0;
-		// Shoot
+		m_shoot_timer -= Time::GetDeltaTime();
+		SetText(L"Cooldown: " + std::to_wstring(m_shoot_timer));
+	}
+	else if (msState.leftButton == Mouse::ButtonStateTracker::PRESSED)
+	{		
+		m_shoot_timer = m_max_shoot_timer;
+		if (AudioSystem::Instance)
+			AudioSystem::Instance->PlaySoundEffect(L"Assets/Shooting.wav");
+	}
+	else if (GetText() != L"")
+	{
+		SetText(L"");
 	}
 }

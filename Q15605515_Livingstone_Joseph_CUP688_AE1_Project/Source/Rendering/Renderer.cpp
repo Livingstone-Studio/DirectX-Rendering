@@ -4,9 +4,10 @@
 #include "../Core/Input.h"
 #include "../Rendering/External/ReadData.h"
 #include "../GameObjects/GameObject.h"
+#include "../GameObjects/TextObject.h"
 #include "../GameObjects/Camera.h"
-#include "OBJ/ObjModelLoader.h"
-#include "OBJ/Model.h"
+#include "Custom OBJ Loader/ObjModelLoader.h"
+#include "Custom OBJ Loader/Model.h"
 #include <chrono>
 #include <iostream>
 
@@ -58,7 +59,9 @@ Renderer::Renderer(GameWindow* window)
 	_cameras.push_back(new Camera(true));
 	_camera = _cameras[_current_cam];
 
-	_fps_counter = new Text2D("Assets/font1.png", m_device, m_device_context);
+	m_screen_font = std::make_unique<SpriteFont>(m_device, L"Assets/wildwest.spritefont");
+
+	m_font_batch = std::make_unique<SpriteBatch>(m_device_context);
 
 	AmbientLight.Type = 0;
 	AmbientLight.Enabled = true;
@@ -111,13 +114,47 @@ void Renderer::Draw(std::vector<GameObject*> gameObjects)
 			model->Draw(this);
 	}
 
-	if (_fps_counter)
-	{
-		_fps_counter->AddText(to_string(Time::GetFPS()), -1, +1, 0.075f);
-		m_device_context->OMSetBlendState(GetBlendState(BLEND_ENABLED), 0, 0xffffffff);
-		_fps_counter->RenderText();
-		m_device_context->OMSetBlendState(GetBlendState(BLEND_DISABLED), 0, 0xffffffff);
-	}
+	RenderTextObject();
+
+	//if (m_screen_font)
+	//{
+	//	// Get normalized pos value for target res
+	//	float norm_pos = 1.0f;
+
+	//	// Find current res
+	//	float width = m_window->GetScreenSize()[0];
+	//	float height = m_window->GetScreenSize()[1];
+
+	//	// Find nomralized change in new res from target res
+	//	width = width / 800;
+	//	height = height / 600;
+
+	//	// multiply with original target pos
+	//	int pos_weight_w = norm_pos / width;
+	//	int pos_weight_h  = norm_pos / height;
+
+	//	m_font_position.x = (m_window->GetScreenSize()[0]) * pos_weight_w;
+	//	m_font_position.y = (m_window->GetScreenSize()[1]) * pos_weight_h;
+
+	//	float sca = 10.0f;
+	//	float scaMult = sca * 0.0001f;
+
+	//	SimpleMath::Vector2 scale;
+	//	scale.x = (800) * (scaMult / width);
+	//	scale.y = (600) * (scaMult / height);
+
+
+	//	m_font_batch->Begin();
+
+	//	std::wstring counter = L"FPS: " + to_wstring(Time::GetFPS());
+	//	const wchar_t* output = counter.c_str();
+
+	//	SimpleMath::Vector2 origin = { 0,0 };
+
+	//	m_screen_font->DrawString(m_font_batch.get(), output, m_font_position, Colors::White, 0.0f, origin, scale);
+
+	//	m_font_batch->End();
+	//}
 
 	m_swapchain->Present(0, 0);
 }
@@ -343,13 +380,17 @@ HRESULT Renderer::InitPipeline()
 	LoadVertexShader(L"SkyboxVertexShader.cso", &m_vertex_shaders[SKYBOX_VERTEX_SHADER], &m_layouts[SKYBOX_INPUT_LAYOUT]);
 	LoadPixelShader(L"SkyboxPixelShader.cso", &m_pixel_shaders[SKYBOX_PIXEL_SHADER]);
 
+
 	return S_OK;
 }
 
 void Renderer::CleanD3D()
 {
-	if (_fps_counter)
-		delete _fps_counter;
+	if (m_screen_font)
+		m_screen_font.reset();
+
+	if (m_font_batch)
+		m_font_batch.reset();
 
 	for (int i = 0; i < VERTEX_SHADER_COUNT; ++i)
 		if (m_vertex_shaders[i])
@@ -392,6 +433,44 @@ void Renderer::CleanD3D()
 		m_device->Release();
 	if (m_device_context)
 		m_device_context->Release();
+}
+
+void Renderer::RenderTextObject()
+{
+	if (!m_screen_font || m_text.size() == 0)
+		return;
+	for (int i = 0; i < m_text.size(); ++i)
+	{
+		if (!m_text[i])
+			continue;
+		RenderText(m_text[i]);
+	}
+}
+
+void Renderer::RenderText(TextObject* text)
+{
+	// Find norm res
+	float width = m_window->GetScreenSize()[0] / m_text_target_resolution[0];
+	float height = m_window->GetScreenSize()[1] / m_text_target_resolution[1];
+
+	// multiply with original target pos
+	float pos_weight_w = text->GetScreenPosition().x / width;
+	float pos_weight_h = text->GetScreenPosition().y / height;
+
+	m_font_position.x = (m_window->GetScreenSize()[0]) * pos_weight_w;
+	m_font_position.y = (m_window->GetScreenSize()[1]) * pos_weight_h;
+
+	float scaMult = text->GetScale() * m_text_scale;
+
+	SimpleMath::Vector2 scale;
+	scale.x = (m_text_target_resolution[0]) * (scaMult / width);
+	scale.y = (m_text_target_resolution[1]) * (scaMult / height);
+
+	const wchar_t* output = text->GetText().c_str();
+
+	m_font_batch->Begin();
+	m_screen_font->DrawString(m_font_batch.get(), output, m_font_position, Colors::White, 0.0f, { 0,0 }, scale);
+	m_font_batch->End();
 }
 
 void Renderer::SwitchCamera()

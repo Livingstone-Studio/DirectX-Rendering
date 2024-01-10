@@ -34,7 +34,7 @@ void Input::HandleInputs()
 	if (!camera)
 		return;
 
-	if (msTracker.leftButton == Mouse::ButtonStateTracker::PRESSED)
+	if (kbStateTracker.pressed.F9)
 	{
 		Renderer::Instance->SwitchCamera();
 	}

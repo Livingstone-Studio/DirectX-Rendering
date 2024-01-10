@@ -4,8 +4,10 @@
 #include <d3d11shader.h>
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
+#include <SimpleMath.h>
 #include <DirectXColors.h>
 #include <DDSTextureLoader.h>
+#include <SpriteFont.h>
 
 #include "GameWindow.h"
 #include "../GameObjects/Camera.h"
@@ -17,6 +19,7 @@ using namespace DirectX;
 
 class Camera;
 class GameObject;
+class TextObject;
 
 class Renderer
 {
@@ -38,13 +41,21 @@ public:
 	Light AmbientLight;
 	Light GameLights[MAX_LIGHTS];
 
+	void AddTextObject(TextObject* text_object) { m_text.push_back(text_object); }
 private:
 	HRESULT InitD3D();
 	HRESULT InitPipeline();
 	void CleanD3D();
 
+	void RenderTextObject();
+	void RenderText(TextObject* text);
 
-	Text2D* _fps_counter;
+	std::unique_ptr<SpriteFont> m_screen_font;
+	SimpleMath::Vector2 m_font_position;
+	std::unique_ptr<SpriteBatch> m_font_batch;
+	std::vector<TextObject*> m_text;
+	float m_text_scale = 0.0001f;
+	float m_text_target_resolution[2] = {800,600};
 
 public:
 	void SetCamera(Camera* cam) { _camera = cam; }
