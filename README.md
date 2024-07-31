@@ -6,6 +6,7 @@ back now, I can see many things I want to do differently - like introducing a sh
 If you are curious about the changes I plan to make when I have spare time - I have a TODO comment in the main.cpp file, disclosing
 areas I want to improve and expand on after briefly revisiting the project.
 
-The project will not work if you were to download it from here - I have commerically licensed assets in the game
-which have been removed from this repo so I can keep it public, that being said - I would like to release a version on
-itch.io at some point after I am happy with any changes I make so I shall provide that once it is ready.
+The project will not work if you were to download it from here - I removed DX Toolkit as I haven't made a CMake yet and didn't want
+to redistribute another library in it's entirety. Also, I have commerically licensed assets in the demo which have been removed from
+this repo so I can keep it public, that being said - I would like to release a version on itch.io at some point after I am happy with 
+any changes I make so I shall provide that once it is ready.
